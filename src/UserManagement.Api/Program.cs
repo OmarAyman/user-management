@@ -104,6 +104,7 @@ builder.Services.AddControllers(options => options.Filters.Add<ValidationFilter>
     });
 
 builder.Services.AddOpenApi();
+builder.Services.AddApplicationSwagger();
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 
@@ -169,9 +170,17 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-if (app.Environment.IsDevelopment())
+// Development only unless explicitly enabled: an API that publishes its own surface in production is a
+// reconnaissance aid.
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue("Swagger:Enabled", false))
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "User Management API v1");
+        options.DocumentTitle = "User Management API";
+    });
 }
 
 app.UseCors(CorsOptions.PolicyName);
@@ -218,5 +227,6 @@ static async Task ApplyDatabaseStartupTasksAsync(WebApplication app)
 public partial class Program
 {
 }
+
 
 

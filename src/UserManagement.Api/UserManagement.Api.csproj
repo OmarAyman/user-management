@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <UserSecretsId>usermanagement-api-8f2c41d6-3b7a-4c1e-9d05-6ae1b4c7f230</UserSecretsId>
@@ -11,8 +11,17 @@
     <ProjectReference Include="..\UserManagement.Infrastructure\UserManagement.Infrastructure.csproj" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <!-- XML docs feed the Swagger descriptions. 1591 is suppressed because requiring a comment on
+         every public member would add noise, not clarity: the comments that exist are the ones worth
+         reading. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
@@ -28,3 +37,5 @@
   </ItemGroup>
 
 </Project>
+
+

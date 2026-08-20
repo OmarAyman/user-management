@@ -1,0 +1,542 @@
+{
+  "info": {
+    "name": "User Management API",
+    "description": "Every endpoint, organised by area.\n\nRun **Authentication → Login (Admin)** first: its test script captures the access token into the `accessToken` collection variable and the created user's id into `userId`, so the rest of the requests work without copying anything by hand.\n\nThe refresh token is never in a response body - it is an httpOnly cookie, which Postman stores in its own cookie jar automatically. That is why `Refresh session` needs no input.\n\nSend `Accept-Language: ar` on any request to get Arabic titles and messages; the `errorCode` stays the same, which is the point of having it.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5080", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "rowVersion", "value": "", "type": "string" },
+    { "key": "adminUsername", "value": "admin", "type": "string" },
+    { "key": "adminPassword", "value": "Admin@123456", "type": "string" },
+    { "key": "userUsername", "value": "jdoe", "type": "string" },
+    { "key": "userPassword", "value": "User@1234567", "type": "string" },
+    { "key": "readOnlyUsername", "value": "readonly", "type": "string" },
+    { "key": "readOnlyPassword", "value": "ReadOnly@1234", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "",
+                  "pm.test('returns the caller identity', () => {",
+                  "  pm.expect(body.user.username).to.eql(pm.collectionVariables.get('adminUsername'));",
+                  "  pm.expect(body.user.role).to.eql('Admin');",
+                  "});",
+                  "",
+                  "pm.test('never returns a refresh token or password material in the body', () => {",
+                  "  const raw = pm.response.text();",
+                  "  pm.expect(raw).to.not.include('refreshToken');",
+                  "  pm.expect(raw).to.not.include('passwordHash');",
+                  "});",
+                  "",
+                  "pm.test('sets an httpOnly refresh cookie', () => {",
+                  "  const header = pm.response.headers.get('Set-Cookie') || '';",
+                  "  pm.expect(header.toLowerCase()).to.include('httponly');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "description": "Signs in. Also sets the rotating refresh token as an httpOnly cookie."
+          }
+        },
+        {
+          "name": "Login (User)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{userUsername}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "description": "Sign in as a standard user, to see the authorization matrix from the other side."
+          }
+        },
+        {
+          "name": "Login (ReadOnlyUser)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{readOnlyUsername}}\",\n  \"password\": \"{{readOnlyPassword}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Login (wrong password)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 with a generic code', () => {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().errorCode).to.eql('INVALID_CREDENTIALS');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{userUsername}}\",\n  \"password\": \"DefinitelyWrong@1\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "description": "An unknown username, a wrong password and a deleted account all return this same response. Five wrong passwords lock the account for 15 minutes - use a throwaway account if you want to see that."
+          }
+        },
+        {
+          "name": "Login (Arabic messages)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept-Language", "value": "ar" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"no-such-user\",\n  \"password\": \"DefinitelyWrong@1\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "description": "The title and detail come back in Arabic; errorCode does not change. Add ?culture=ar to any request for the same effect without a header."
+          }
+        },
+        {
+          "name": "Refresh session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('accessToken', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api", "auth", "refresh"] },
+            "description": "No body: the refresh token travels as an httpOnly cookie. Each call rotates it. Sending a token that was already rotated is treated as theft and revokes the whole family."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "auth", "logout"] },
+            "description": "Revokes the presented refresh token. Idempotent."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?pageNumber=1&pageSize=10&sortBy=createdAt&sortDirection=Descending",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                { "key": "pageNumber", "value": "1" },
+                { "key": "pageSize", "value": "10" },
+                { "key": "sortBy", "value": "createdAt", "description": "username | email | firstName | lastName | role | createdAt" },
+                { "key": "sortDirection", "value": "Descending" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "roleId", "value": "1", "disabled": true }
+              ]
+            },
+            "description": "Active users only. There is no includeDeleted parameter: deleted users live behind their own Admin-only route, because soft-delete visibility is an authorization decision rather than a value a client passes."
+          }
+        },
+        {
+          "name": "List users (search + role filter)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?search=khalil&roleId=2&pageSize=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                { "key": "search", "value": "khalil" },
+                { "key": "roleId", "value": "2" },
+                { "key": "pageSize", "value": "25" }
+              ]
+            },
+            "description": "Search covers username, email, first name and last name, and runs in SQL."
+          }
+        },
+        {
+          "name": "List users (invalid sort field)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 INVALID_SORT_FIELD', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().errorCode).to.eql('INVALID_SORT_FIELD');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?sortBy=passwordHash",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [{ "key": "sortBy", "value": "passwordHash" }]
+            },
+            "description": "The sort field is a whitelist, so client input selects a branch and never becomes part of a query string."
+          }
+        },
+        {
+          "name": "List deleted users (Admin only)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/deleted", "host": ["{{baseUrl}}"], "path": ["api", "users", "deleted"] },
+            "description": "403 for User and ReadOnlyUser. The only read path over soft-deleted rows."
+          }
+        },
+        {
+          "name": "Check availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/availability?username=admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "availability"],
+              "query": [{ "key": "username", "value": "admin" }]
+            },
+            "description": "Advisory only - the unique index decides. Checked against active users, so a deleted user's identifiers report as available."
+          }
+        },
+        {
+          "name": "Create user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created with a Location header', () => {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.headers.get('Location')).to.be.a('string');",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('userId', body.id);",
+                  "pm.collectionVariables.set('rowVersion', body.rowVersion);",
+                  "",
+                  "pm.test('returns a concurrency token and no password material', () => {",
+                  "  pm.expect(body.rowVersion).to.be.a('string').and.not.empty;",
+                  "  pm.expect(pm.response.text()).to.not.include('passwordHash');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"postman{{$randomInt}}\",\n  \"email\": \"postman{{$randomInt}}@example.com\",\n  \"firstName\": \"Post\",\n  \"lastName\": \"Man\",\n  \"password\": \"Created@123456\",\n  \"roleId\": 2\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] },
+            "description": "Admin only. Captures the new id and its rowVersion for the requests below."
+          }
+        },
+        {
+          "name": "Get user by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('rowVersion', pm.response.json().rowVersion);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}"] },
+            "description": "Refreshes the captured rowVersion. Run this before an update if a previous write changed the row."
+          }
+        },
+        {
+          "name": "Update user (includes role)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('rowVersion', pm.response.json().rowVersion);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"updated{{$randomInt}}@example.com\",\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Man\",\n  \"roleId\": 3,\n  \"rowVersion\": \"{{rowVersion}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}"] },
+            "description": "There is no username field (immutable), no password (own endpoint) and no isDeleted (delete has its own route). rowVersion is required: send a stale one and the response is 409 RESOURCE_MODIFIED."
+          }
+        },
+        {
+          "name": "Update user (stale concurrency token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 RESOURCE_MODIFIED', () => {",
+                  "  pm.response.to.have.status(409);",
+                  "  pm.expect(pm.response.json().errorCode).to.eql('RESOURCE_MODIFIED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"stale@example.com\",\n  \"firstName\": \"Stale\",\n  \"lastName\": \"Write\",\n  \"roleId\": 2,\n  \"rowVersion\": \"AAAAAAAAAAE=\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}"] },
+            "description": "A deliberately wrong token, to show the lost-update guard rejecting the write."
+          }
+        },
+        {
+          "name": "Delete user (soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}"] },
+            "description": "Soft delete. Repeat it and the answer is 409 USER_ALREADY_DELETED, not 404 - an administrator needs to tell 'already gone' from 'never existed'."
+          }
+        },
+        {
+          "name": "Restore user",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"rowVersion\": \"{{rowVersion}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}/restore", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}", "restore"] },
+            "description": "Run 'Get user by id' first: the delete changed the row, so the token you held is now stale. Restore also re-checks that the username and email are still free."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get my profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('rowVersion', pm.response.json().rowVersion);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/users/me", "host": ["{{baseUrl}}"], "path": ["api", "users", "me"] },
+            "description": "No id in the route: the subject comes from the validated token, which is why there is nothing here for an attacker to swap."
+          }
+        },
+        {
+          "name": "Update my profile",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"System\",\n  \"lastName\": \"Administrator\",\n  \"email\": \"admin@example.com\",\n  \"rowVersion\": \"{{rowVersion}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/me", "host": ["{{baseUrl}}"], "path": ["api", "users", "me"] },
+            "description": "Three fields. Run 'Get my profile' first for a current rowVersion."
+          }
+        },
+        {
+          "name": "Update my profile (mass assignment attempt)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 - unexpected fields are refused, not ignored', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"System\",\n  \"lastName\": \"Administrator\",\n  \"email\": \"admin@example.com\",\n  \"rowVersion\": \"{{rowVersion}}\",\n  \"roleId\": 1,\n  \"isDeleted\": false\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/me", "host": ["{{baseUrl}}"], "path": ["api", "users", "me"] },
+            "description": "The payload the assignment names. The model has no role or isDeleted field to bind, and unmapped members are rejected rather than silently dropped."
+          }
+        },
+        {
+          "name": "Change my password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{adminPassword}}\",\n  \"newPassword\": \"Admin@1234567\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/me/change-password", "host": ["{{baseUrl}}"], "path": ["api", "users", "me", "change-password"] },
+            "description": "Requires the current password. On success every refresh-token family for the user is revoked. Remember to change the adminPassword variable if you run this."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "List roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/roles", "host": ["{{baseUrl}}"], "path": ["api", "roles"] },
+            "description": "Read-only reference data: Admin (1), User (2), ReadOnlyUser (3)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit",
+      "item": [
+        {
+          "name": "List audit entries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs?pageSize=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "audit-logs"],
+              "query": [
+                { "key": "pageSize", "value": "25" },
+                { "key": "action", "value": "RoleChange", "disabled": true },
+                { "key": "entityId", "value": "{{userId}}", "disabled": true }
+              ]
+            },
+            "description": "Admin only, newest first. oldValues and newValues are parsed JSON objects. Password material appears as \"***\" - the event is visible, the value is not."
+          }
+        },
+        {
+          "name": "Audit entries for one user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs?entityId={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "audit-logs"],
+              "query": [{ "key": "entityId", "value": "{{userId}}" }]
+            },
+            "description": "Filtered by the immutable user id, never by username - usernames are released when a user is deleted, so filtering by name could mix two different people."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] },
+            "description": "Liveness only - no database call, so a saturated connection pool does not read as a dead process."
+          }
+        }
+      ]
+    }
+  ]
+}

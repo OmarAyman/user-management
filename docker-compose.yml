@@ -1,0 +1,66 @@
+# The reviewer path: no .NET SDK and no local SQL Server needed.
+#
+#   cp .env.example .env      # then edit MSSQL_SA_PASSWORD and JWT_KEY
+#   docker compose up --build
+#
+# The API applies migrations and seeds the demo accounts on first start, so a working sign-in is one command
+# away. The SPA is still run with npm - a reviewer looking at an Angular application wants the dev server.
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?set MSSQL_SA_PASSWORD in .env}
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      # The API waits for this: without it, migrations race the engine's startup and fail on a cold volume.
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: src/UserManagement.Api/Dockerfile
+    depends_on:
+      mssql:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Server=mssql,1433;Database=UserManagement;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False"
+
+      # No default: the startup guard refuses to boot in Production on a missing or placeholder key, which is
+      # the behaviour you want from a deployment that was configured carelessly.
+      Jwt__Key: ${JWT_KEY:?set JWT_KEY in .env to at least 32 characters}
+      Jwt__Issuer: usermanagement.local
+      Jwt__Audience: usermanagement.spa
+
+      # Compose is the reviewer path, so it migrates and seeds itself. A real deployment would not.
+      Database__MigrateOnStartup: "true"
+      Seed__Enabled: "true"
+      Seed__AdminPassword: ${SEED_ADMIN_PASSWORD:-Admin@123456}
+      Seed__UserPassword: ${SEED_USER_PASSWORD:-User@1234567}
+      Seed__ReadOnlyPassword: ${SEED_READONLY_PASSWORD:-ReadOnly@1234}
+      Seed__SampleUserCount: "24"
+
+      Cors__AllowedOrigins__0: "http://localhost:4200"
+
+      # http inside the container; a real deployment terminates TLS in front of it, which is also why the
+      # refresh cookie's Secure flag is configurable.
+      RefreshToken__SecureCookie: "false"
+    ports:
+      - "5080:8080"
+
+volumes:
+  mssql-data:

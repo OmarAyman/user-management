@@ -1,4 +1,4 @@
-<Project>
+﻿<Project>
 
   <!-- Central package version management: versions live here, project files carry only package ids.
        One place to audit, one place to bump, and no two projects silently on different versions. -->
@@ -12,6 +12,7 @@
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="10.0.11" />
@@ -48,3 +49,5 @@
   </ItemGroup>
 
 </Project>
+
+
