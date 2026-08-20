@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/UserManagement.Api/UserManagement.Api.csproj" />
+    <Project Path="src/UserManagement.Application/UserManagement.Application.csproj" />
+    <Project Path="src/UserManagement.Domain/UserManagement.Domain.csproj" />
+    <Project Path="src/UserManagement.Infrastructure/UserManagement.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/UserManagement.IntegrationTests/UserManagement.IntegrationTests.csproj" />
+    <Project Path="tests/UserManagement.UnitTests/UserManagement.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\UserManagement.Application\UserManagement.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <!-- PasswordHasher<T> only. ASP.NET Core Identity itself is deliberately not used - see ADR
+         "Rejected outright" in docs/12-decision-log.md. -->
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <!-- Enables ValidateDataAnnotations() so options are checked at startup, not at first use. -->
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+    <!-- Token creation only. Token *validation* is configured in the API layer by the JwtBearer handler. -->
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" />
+  </ItemGroup>
+
+</Project>

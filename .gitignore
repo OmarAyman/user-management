@@ -12,9 +12,11 @@ coverage/
 *.trx
 artifacts/
 
-## Secrets - never commit real configuration
-appsettings.Development.json
+## Secrets - never commit real configuration.
+## appsettings.Development.json IS committed: it holds a local Windows-auth connection string and the
+## documented demo passwords, and deliberately no signing key (the API generates an ephemeral one).
 appsettings.Production.json
+appsettings.Staging.json
 appsettings.local.json
 *.pfx
 *.p12
@@ -31,6 +33,10 @@ yarn-error.log*
 *.tsbuildinfo
 playwright-report/
 test-results/
+
+## Runtime output - Serilog writes a rolling file per day next to the API
+logs/
+*.log
 
 ## Editors / OS
 .idea/

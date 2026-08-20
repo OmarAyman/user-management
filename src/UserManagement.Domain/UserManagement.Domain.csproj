@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The Domain layer has no package or project references, by design. Anything it needed from the
+       outside would be a dependency pointing the wrong way. An architecture test asserts this. -->
+
+</Project>
