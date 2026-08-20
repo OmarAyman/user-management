@@ -193,18 +193,23 @@ src/app/
   core/           app-lifetime singletons, provided once at bootstrap
     auth/         AuthService (signal-based session), token refresh orchestration
     guards/       authGuard, roleGuard (functional CanActivateFn)
-    interceptors/ correlationId -> authToken -> errorMapping -> authRefresh(401) -> logging
-    services/     UsersApi, RolesApi, AuditApi, LocaleService
+    interceptors/ correlationId -> acceptLanguage -> authToken -> authRefresh -> apiError
+    i18n/         TranslocoHttpLoader, TranslatedTitleStrategy (localized browser tab titles)
+    services/     UsersApi, AuditApi, LocaleService, NotificationService
     models/       DTO interfaces mirroring the API contract 1:1
-  shared/         stateless and reusable: ConfirmDialog, EmptyState, ErrorState, LoadingBar,
-                  HasRoleDirective, LocalizedDatePipe
+  shared/         stateless and reusable: ConfirmDialog, state panels (empty/error/loading),
+                  HasRoleDirective
   layout/         AppShell: header, language switcher, user menu, responsive nav
   features/       lazy-loaded routed areas: auth/, users/, profile/, audit/
 ```
 
 **Dependency direction:** `features -> core + shared`, `layout -> core + shared`; `core` never imports
-`shared` or `features`; nothing outside `features` imports `features`. Enforced with
-`no-restricted-imports` ESLint rules so a violation fails CI rather than a review.
+`shared` or `features`; nothing outside `features` imports `features`; no feature imports a sibling. Enforced by
+`import-x/no-restricted-paths` (`npm run lint`), which resolves each import to a real path first, so a violation
+fails CI rather than a review. `npm run lint:verify` lints one deliberate violation per rule to prove the rules
+fire at all - the frontend counterpart to the backend's architecture tests, and not a redundant one: the rules
+were silently inert on their first run for want of a TypeScript-aware resolver. The rule earned its place
+immediately, refusing a spec in `core/i18n/` that imported `features/users`.
 
 **Interceptor order is behaviour, and the two directions are opposite.** Requests pass through the array top
 to bottom; responses come back bottom to top. The registered order is therefore:

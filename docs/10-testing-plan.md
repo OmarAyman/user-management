@@ -231,21 +231,23 @@ outcome recorded in ADR-0015 rather than left half-built.
 ## 6. Commands
 
 ```bash
-dotnet test                                            # all backend tests
+dotnet test                                            # 109 unit + 153 integration
 dotnet test tests/UserManagement.UnitTests             # fast loop, no Docker needed
 dotnet test --collect:"XPlat Code Coverage"            # coverage for the report
-npm test --prefix frontend                             # Vitest, watch off in CI
-npm run lint --prefix frontend
-npm run e2e --prefix frontend                          # five Playwright smoke specs, Chromium
-
+npm test --prefix frontend                             # 72 Vitest tests, watch off in CI
+npm run lint --prefix frontend                         # ESLint: boundaries, sanitizer ban, template a11y + i18n
+npm run lint:verify --prefix frontend                  # proves each of those rules actually fires
+npm run lint:styles --prefix frontend                  # no physical left/right in any stylesheet
+npm run e2e --prefix frontend                          # 78 Playwright tests, Chromium, API + SPA must be up
 ```
 
 ## 7. What is not tested, and why
 
-- **No end-to-end suite beyond the five smoke specs above.** Component tests with a mocked HTTP layer plus
-  real API integration tests already cover behaviour; the smoke suite only proves the pieces meet in a
-  browser. Deep flows (every validation message, every error state, every role on every screen) stay at the
-  cheaper layers where they do not flake.
+- **No deep end-to-end suite.** The browser suite grew during hardening from five smoke specs to 77 tests, but
+  the added weight is all in accessibility (27) and responsive layout (36) - two things only a real browser can
+  answer. Behaviour stays where it is cheaper and steadier: component tests over a mocked HTTP layer, and
+  integration tests against real SQL Server. Deep flows (every validation message, every error state, every role
+  on every screen) are deliberately not duplicated in the browser.
 - **No load or performance testing.** No performance NFR is stated. The query design in
   [05-database-model.md](05-database-model.md) addresses the assignment's performance requirements
   structurally (SQL-side filtering, covering indexes, projections, `AsNoTracking`), and one integration test

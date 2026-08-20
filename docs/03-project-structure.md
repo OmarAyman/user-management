@@ -210,52 +210,76 @@ UserManagement.IntegrationTests/
 ```text
 frontend/
 ├── .nvmrc                          "24" - Node 24 LTS is required, not suggested (ADR-0017)
-├── angular.json  package.json  tsconfig*.json  eslint.config.js  vitest config
+├── angular.json  package.json  tsconfig*.json
+├── eslint.config.js                boundary rules, sanitizer ban, template accessibility + i18n
+├── vitest.config.ts                caps the worker pool; see README for why
 ├── playwright.config.ts            Chromium only
-├── e2e/                            five smoke specs (ADR-0015)
+├── scripts/
+│   ├── verify-lint-rules.mjs       proves each architectural lint rule actually fires
+│   └── verify-logical-properties.mjs   no physical left/right in any stylesheet
+├── e2e/
 │   ├── admin-login.spec.ts         admin-creates-user.spec.ts
 │   ├── user-list-query.spec.ts     readonly-cannot-mutate.spec.ts
-│   └── arabic-rtl.spec.ts
-├── public/
+│   ├── arabic-rtl.spec.ts          helpers.ts
+│   ├── accessibility.spec.ts       axe scans + keyboard/focus/live-region behaviour
+│   └── responsive.spec.ts          four viewports, both directions
+├── public/i18n/en.json, ar.json    runtime translation catalogues (Transloco)
 └── src/
     ├── main.ts                     bootstrapApplication + provideZonelessChangeDetection
-    ├── styles/                     theme.scss (Material tokens), _rtl.scss, _tokens.scss
-    ├── assets/i18n/en.json, ar.json
+    ├── index.html                  static shell; its <title> is pre-boot, hence exempt from the i18n rule
+    ├── styles.scss                 Material theme tokens, focus ring, RTL-safe base styles
+    ├── test-setup.ts               guarantees working browser storage whatever Node version runs the specs
+    ├── test-setup.spec.ts          and proves both of its branches
     └── app/
-        ├── app.config.ts           providers: router, http + interceptor chain, Material, i18n
-        ├── app.routes.ts           top-level routes with lazy loadChildren
+        ├── app.config.ts           providers: router, title strategy, http interceptor chain, i18n
+        ├── app.routes.ts           top-level routes, lazy loadComponent/loadChildren, title *keys*
+        ├── route-titles.spec.ts    every route title is a key both catalogues resolve
+        ├── i18n-catalogue.spec.ts  catalogue parity and error-code coverage
         ├── core/
-        │   ├── auth/               auth.service.ts (signals), session.model.ts,
-        │   │                       token-refresh.coordinator.ts
-        │   ├── guards/             auth.guard.ts, role.guard.ts
-        │   ├── interceptors/       correlation-id, auth-token, api-error, auth-refresh, logging
-        │   ├── http/               api-error.model.ts (typed union), api-client.ts
-        │   ├── services/           users-api, roles-api, audit-api, locale.service,
-        │   │                       notification.service, breakpoint.service
-        │   └── models/             user.model.ts, role.model.ts, paged-result.model.ts,
-        │                           audit-log.model.ts
+        │   ├── auth/               auth.service.ts (signals)
+        │   ├── config/             api-base-url.ts
+        │   ├── guards/             auth.guard.ts (authGuard + roleGuard)
+        │   ├── http/               api-error.interceptor.ts, api-error.model.ts (typed union)
+        │   ├── i18n/               transloco-loader.ts, translated-title.strategy.ts
+        │   ├── interceptors/       correlation-id, accept-language, auth-token, auth-refresh
+        │   ├── services/           users-api, audit-api, locale.service, notification.service
+        │   └── models/             api.models.ts
         ├── shared/
-        │   ├── components/         confirm-dialog, empty-state, error-state, loading-bar,
-        │   │                       page-header, role-badge
-        │   ├── directives/         has-role.directive.ts
-        │   └── pipes/              localized-date.pipe.ts
-        ├── layout/                 app-shell, header, language-switcher, user-menu, side-nav
+        │   ├── components/         confirm-dialog, state-panels (empty/error/loading)
+        │   └── directives/         has-role.directive.ts
+        ├── layout/                 app-shell.ts (toolbar, nav, language switcher, user menu)
         └── features/
-            ├── auth/               login.page.ts + login.form
+            ├── auth/               login.page.ts
             ├── users/              users-list.page.ts (table, search, sort, paging, role filter),
             │                       user-form.page.ts (create/edit), users.routes.ts
-            ├── profile/            profile.page.ts, change-password.page.ts
-            └── audit/              audit-list.page.ts, audit.routes.ts
+            ├── profile/            profile.page.ts (details + password change)
+            ├── audit/              audit.page.ts
+            └── errors/             forbidden.page.ts
 ```
 
 ### ESLint boundary rules
 
 ```text
-core/**      may not import shared/** or features/**
-shared/**    may not import features/** or core/services/**
+core/**      may not import shared/**, features/** or layout/**
+shared/**    may not import features/**, layout/** or core/services/**
 features/**  may not import another features/* sibling
 layout/**    may import core/** and shared/** only
 ```
+
+Enforced by `import-x/no-restricted-paths`, which resolves each import to a real path before judging it. That
+detail matters: a cross-feature import written from inside a feature reads `../audit/audit.page`, with no
+`features/` segment for a string pattern to match on - so pattern-based rules would miss the one boundary most
+easily crossed by accident.
+
+Two further rules sit alongside them: `bypassSecurityTrust*` is refused outright (docs/08-security-plan.md
+bans it, and a ban in prose is not a control), and `localStorage.setItem` is refused everywhere except
+`LocaleService`, which is the only code allowed to persist anything.
+
+A clean `eslint .` is ambiguous - it means either the code obeys the boundaries or the rules never ran. On the
+first run they had not: without a TypeScript-aware resolver, no extensionless relative import resolved and
+every violation passed silently. `npm run lint:verify` settles the question by linting nine deliberate
+violations, one per rule, plus a negative control; it is the frontend counterpart to the backend's
+architecture tests.
 
 ## Naming and style conventions
 

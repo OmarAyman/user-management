@@ -6,9 +6,9 @@ delete, an append-only audit trail, and English/Arabic localization with right-t
 
 | | |
 |---|---|
-| **Backend tests** | 99 unit, 145 integration (real SQL Server via Testcontainers) |
-| **Frontend tests** | 55 unit/component (Vitest), 14 browser smoke (Playwright) |
-| **Build** | zero warnings, warnings-as-errors on |
+| **Backend tests** | 109 unit, 153 integration (real SQL Server via Testcontainers) |
+| **Frontend tests** | 72 unit/component (Vitest), 78 browser tests (Playwright: 15 smoke, 27 accessibility, 36 responsive) |
+| **Build** | zero warnings, warnings-as-errors on; `eslint .` clean, with the boundary rules proven to fire |
 
 ---
 
@@ -103,7 +103,7 @@ pipeline would otherwise exist for ([ADR-0003](docs/12-decision-log.md)).
 | Tool | Version | Notes |
 |---|---|---|
 | .NET SDK | **10.0** | `dotnet --version` |
-| Node.js | **24 LTS** | Pinned by `frontend/.nvmrc`. Angular 21 supports `^20.19 \|\| ^22.12 \|\| ^24`; odd-numbered releases such as 25 are outside it |
+| Node.js | **24 LTS** | Pinned by `frontend/.nvmrc` and by `engines`. Angular 21 supports `^20.19 \|\| ^22.12 \|\| ^24`, so npm warns `EBADENGINE` on an odd-numbered release such as 25. Everything still builds, lints and tests there - `src/test-setup.ts` exists so the specs do not depend on which Node version supplies the browser storage globals - but 24 is the supported version |
 | SQL Server | 2019+ | Local instance, LocalDB, or the Docker Compose service |
 | Docker | any recent | Only for Compose and for the integration tests' database |
 
@@ -173,7 +173,24 @@ export ConnectionStrings__DefaultConnection="Server=...;Database=UserManagement;
 | `PasswordPolicy` | Length and composition requirements (12-128, upper + lower + digit) |
 | `RateLimiting` | Auth requests permitted per window, per client address |
 | `Cors` | Explicit SPA origins - credentials are required by the refresh cookie, so `*` is not an option |
+| `ForwardedHeaders` | Proxies whose `X-Forwarded-For` may be believed. Absent by default, and absent means the header is ignored |
 | `Seed` | Whether to create demo accounts, and their passwords |
+
+### Running behind a reverse proxy
+
+The audit trail records a client IP, and a lockout counts attempts per account, so a request's apparent origin
+matters. `X-Forwarded-For` is therefore **ignored unless a deployment names the proxies it trusts** - an
+unauthenticated caller can put anything in that header, and believing it would let an attacker forge the IP in
+every audit row.
+
+```bash
+export ForwardedHeaders__KnownProxies__0="10.0.0.4"      # the load balancer's address
+export ForwardedHeaders__KnownNetworks__0="10.0.0.0/24"  # or a CIDR range
+export ForwardedHeaders__ForwardLimit="1"                # hops to walk back, default 1
+```
+
+With nothing configured the API uses the immediate connection address and says so at startup. Two integration
+tests pin both halves: the header is ignored when no proxy is trusted, and honoured when one is.
 
 ## Running the backend
 
@@ -202,17 +219,22 @@ which is what lets the httpOnly refresh cookie work in development without CORS 
 ## Running the tests
 
 ```bash
-# Backend: 99 unit + 145 integration
+# Backend: 109 unit + 153 integration
 dotnet test
 
 # Fast loop, no Docker required
 dotnet test tests/UserManagement.UnitTests
 
-# Frontend: 55 unit and component tests
+# Frontend: 72 unit and component tests
 npm test --prefix frontend
 
-# Browser smoke suite: needs the API and the SPA running
+# Browser suite, 78 tests: needs the API and the SPA running
 npm run e2e --prefix frontend
+
+# Lint, and a check that the architectural lint rules actually fire
+npm run lint --prefix frontend
+npm run lint:verify --prefix frontend
+npm run lint:styles --prefix frontend
 ```
 
 Integration tests run against **real SQL Server 2022 in a container** (Testcontainers). That is deliberate:
@@ -228,10 +250,26 @@ The fixture asserts which database it connected to. That check exists because a 
 the suite run green against the wrong database - a test pointed somewhere unintended is worse than a failing
 one.
 
-**One environment quirk worth knowing:** run the frontend tests in a separate step from `dotnet test` rather
-than immediately after it. Vitest spawns a worker process per spec file, and lingering .NET test hosts can
-leave too little headroom for them, which surfaces as `Failed to start forks worker` rather than as a test
-failure. Both suites pass reliably when run one at a time.
+**Two notes on the frontend test runner**, both reliability fixes rather than preferences:
+
+- `frontend/vitest.config.ts` caps the worker pool. Vitest sizes it from the CPU count, and with the dev server
+  or a .NET test host already running there is not always enough headroom - the run then fails with
+  `Failed to start forks worker` for every file, which reads like catastrophic breakage and is a resource limit.
+- `frontend/src/test-setup.ts` guarantees working `localStorage` and `sessionStorage` in specs. The project pins
+  **Node 24** (`.nvmrc`), where the storage globals come from jsdom. From Node 25 the runtime provides its own
+  Web Storage on the shared global, and without `--localstorage-file` it is a stub whose methods are all
+  `undefined` - so twelve storage-touching specs fail with `localStorage.clear is not a function`, pointing at
+  the specs rather than at the runtime. The setup file uses the environment's storage when it works and
+  substitutes a real in-memory `Storage` when it does not, so the suite passes on 24 and on 25 alike. Both
+  branches are tested (`src/test-setup.spec.ts`).
+
+**The browser suite needs both servers up**, and Chromium installed once:
+
+```bash
+npx playwright install chromium          # first time only
+# then, with the API on :5080 and the SPA on :4200
+npm run e2e --prefix frontend
+```
 
 ## API documentation
 

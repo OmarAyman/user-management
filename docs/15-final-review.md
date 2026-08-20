@@ -2,17 +2,22 @@
 
 Executed after implementation, against the original brief. Everything here was run, not inspected.
 
-**Verification run:** .NET 10.0.111, Node 24.19.0, SQL Server 2022 (local + Testcontainers), Chromium via
-Playwright 1.62.1.
+**Verification run:** .NET 10.0.111, SQL Server 2022 (local + Testcontainers), Chromium via Playwright 1.62.1.
+Node 24.19.0 for the implementation phases; the submission-hardening pass re-ran everything on Node 25.9.0 as
+well, which is how the storage-globals problem in section 6 came to light.
 
 ```text
-dotnet build                    0 warnings, 0 errors      (warnings-as-errors enabled)
-dotnet test                     99 unit + 145 integration passed
-npm test --prefix frontend      55 passed
-npm run e2e --prefix frontend   14 passed
+dotnet build                       0 warnings, 0 errors      (warnings-as-errors enabled)
+dotnet test                        109 unit + 153 integration passed
+npm test --prefix frontend         72 passed
+npm run e2e --prefix frontend      78 passed
+npm run lint --prefix frontend     0 problems
+npm run lint:verify --prefix frontend   9 lint-rule checks passed
+npm run lint:styles --prefix frontend   no physical direction properties
+newman run postman/...             42 requests, 66 assertions, 0 failures (run twice)
 ```
 
-Total: **313 automated tests, all passing.**
+Total: **412 automated tests, all passing**, plus 66 Postman assertions and 9 lint-rule checks.
 
 ---
 
@@ -55,13 +60,13 @@ The brief's 41-item gate, with what proves each line.
 | 31 | Arabic localization works | Pass | `An_authentication_failure_is_arabic_under_accept_language_ar`; resx parity test |
 | 32 | RTL works | Pass | `arabic-rtl.spec.ts`; `dir="rtl"`, Arabic headers, table intact |
 | 33 | Swagger works | Pass | UI returns 200; 13 paths; Bearer scheme present |
-| 34 | Postman collection exists | Pass | `postman/` collection + environment, with assertions |
-| 35 | Unit tests pass | Pass | 99 |
-| 36 | Integration tests pass | Pass | 145, against real SQL Server |
-| 37 | Angular tests pass | Pass | 55 Vitest + 14 Playwright |
+| 34 | Postman collection exists | Pass | 8 folders, 42 requests, 66 assertions; run through newman twice with zero failures |
+| 35 | Unit tests pass | Pass | 109 |
+| 36 | Integration tests pass | Pass | 153, against real SQL Server |
+| 37 | Angular tests pass | Pass | 72 Vitest + 78 Playwright |
 | 38 | README complete | Pass | all 17 required sections |
 | 39 | No secrets committed | Pass | `git grep` for key patterns; only documented demo passwords and PBKDF2 hash literals |
-| 40 | Git history meaningful | Pass | 20 commits, one coherent slice each, each explaining *why* |
+| 40 | Git history meaningful | Pass | one coherent slice per commit, each explaining *why*; no history rewritten during hardening |
 | 41 | No obvious vulnerabilities remain | Pass | `dotnet list package --vulnerable` clean; `npm audit` clean (see section 3) |
 
 ## 2. Requirements traceability
@@ -78,11 +83,12 @@ Summary by area:
 | User management and list behaviour | 15 | 15 | |
 | Audit, logging, observability | 13 | 13 | Audit policy is normative and enforced by 12 tests |
 | API design, errors, validation | 8 | 8 | |
-| Localization and UX | 12 | 12 | |
+| Localization and UX | 12 | 12 | Accessibility and responsive layout moved from `Partial` to `Verified` in the hardening pass, on the strength of 63 browser tests |
 | Security review | 7 | 7 | section 3 below |
-| Testing, documentation, delivery | 13 | 13 | |
+| Testing, documentation, delivery | 15 | 14 | The one exception is the demo **recording** (J-15): the script is written and every screen it calls for works, but no video is in the repository |
 
-Nothing is marked verified without a named test or a recorded run.
+Nothing is marked verified without a named test or a recorded run, and the one thing that is missing is listed
+as missing rather than dropped from the matrix.
 
 ## 3. Security review
 
@@ -114,10 +120,15 @@ npm audit (including dev)                               0 vulnerabilities
 ```
 
 `npm audit` initially reported two high-severity advisories in the Playwright dev dependency. Resolved by
-updating `@playwright/test` to 1.62.1; the browser suite was re-run afterwards and still passes 14/14.
+updating `@playwright/test` to 1.62.1; the browser suite was re-run afterwards and passes.
+
+The hardening pass added five dev dependencies (`eslint`, `angular-eslint`, `typescript-eslint`,
+`@eslint/js`, `eslint-plugin-import-x`) to implement the boundary enforcement the architecture documents already
+claimed. `npm audit` was re-run afterwards: **0 vulnerabilities**. ESLint 9 was installed first and npm reported
+it as no longer supported; it was replaced with 10.8.1 rather than left on an unsupported line.
 
 `dotnet list package --deprecated` flags **xunit 2.9.3** as legacy in favour of xunit.v3. Not a
-vulnerability and not addressed: migrating the test framework at the end of the project would risk 244 working
+vulnerability and not addressed: migrating the test framework at the end of the project would risk 262 working
 tests for no functional gain. Recorded as a known limitation instead.
 
 ### Residual risks
@@ -161,11 +172,45 @@ Also checked and found clean: no `TODO`, no `NotImplementedException`, no commen
 `async void`, every `async` method taking a `CancellationToken` on the request path, no magic strings for
 roles or error codes, and no controller containing business logic or a `try/catch`.
 
-One environment quirk, not a defect: Vitest spawns a worker per spec file, and lingering .NET test hosts from
-a `dotnet test` run immediately before can leave too little headroom, which surfaces as
-`Failed to start forks worker`. Running the two suites as separate steps is reliable, and the README says so.
+## 5. Submission-hardening pass
 
-## 5. Design documents corrected by implementation
+A second review pass over the finished repository, with a deliberately narrow mandate: fix genuine defects,
+verify what was claimed but unproven, correct documentation that did not match reality, and change nothing else.
+No architecture was redesigned, no framework replaced, no history rewritten.
+
+### Defects found and fixed
+
+| # | Found | Fix |
+|---|---|---|
+| 16 | **Documented-but-absent frontend boundaries.** 02-architecture and 03-project-structure both stated that the four boundary rules were enforced by ESLint so a violation "fails CI rather than a review". There was no ESLint in the project at all: no config, no dependency, and `npm run lint` failed with *Cannot find "lint" target*. | Implemented what was documented rather than softening it: `eslint.config.js` with `import-x/no-restricted-paths` for all four rules, plus template accessibility and i18n rules. |
+| 17 | **The boundary rules were silently inert.** Once installed, `eslint .` reported zero problems - and so did a deliberate `core -> features` import. Without a TypeScript-aware resolver no extensionless relative import resolved, and unresolved imports pass. A green lint run proved nothing. | Added the resolver, and wrote `scripts/verify-lint-rules.mjs`: nine deliberate violations, one per rule, plus a negative control. It found the problem and now prevents it recurring. It also immediately caught a spec of mine in `core/i18n/` importing `features/users`. |
+| 18 | **Browser tab titles were never localized.** 09-localization-plan claimed page titles were localized "via a title strategy". No strategy existed; routes carried literal English (`title: 'Users'`), so every tab title stayed English in an Arabic session. The only user-visible text outside a template, and the only text the localization pass missed. | `TranslatedTitleStrategy` plus route translation keys, reusing the keys the pages already display so a title cannot drift from its page. Five unit tests, one browser test, and `route-titles.spec.ts` asserting all seven keys resolve in both catalogues. |
+| 19 | **The first title strategy showed the raw key.** Translating on `langChanges$` answers with the key, because the new catalogue has not loaded when the language changes. The tab read `users.list.title` until the next navigation. The unit test had preloaded both catalogues and passed; a browser test caught it. | Rewritten over `selectTranslate`, which waits for the catalogue and re-emits per language. The unit spec now uses a deliberately slow loader, and one test pins the exact regression: the previous title stays until the new one is ready. |
+| 20 | **Twelve tests failed on Node 25.** From Node 25 the runtime exposes its own Web Storage on the global the jsdom environment shares, and without `--localstorage-file` it is a stub whose methods are `undefined`. The failures read `localStorage.clear is not a function` - blaming the specs for a runtime difference. A reviewer on a current Node would have seen a red suite. | `src/test-setup.ts` uses the environment's storage when it works and substitutes a real in-memory `Storage` when it does not. Both branches are tested, because on any one machine only one of them runs. |
+| 21 | **Vitest failed under load.** `Failed to start forks worker`, three times, with the dev server or a .NET test host running - a resource limit that reads like catastrophic breakage. Previously documented as a quirk to work around by running the suites separately; that is a workaround, not a fix. | `vitest.config.ts` caps the worker pool. Switching to the threads pool was tried first and was wrong - it broke the browser globals - which is recorded in the file so it is not retried. |
+| 22 | **Two more documented-but-absent enforcement claims.** 09-localization-plan claimed a lint rule for literal text in templates and a stylelint rule banning physical `left`/`right`. Neither existed, though the codebase happened to comply with both. | `@angular-eslint/template/i18n` with `checkText` now makes literal text an error (`index.html` exempted, with the reason stated), and `scripts/verify-logical-properties.mjs` checks `.scss` and inline styles - verified by feeding it a violation, not just by watching it pass. |
+| 23 | **`X-Forwarded-For` was documented as handled and was not.** The audit trail records a client IP and lockout counts per account, so a forged header would put attacker-chosen addresses into audit rows that look authoritative. | Opt-in `ForwardedHeaders` configuration: the header is ignored unless a deployment names the proxies it trusts, ASP.NET Core's default loopback trust is cleared rather than inherited, and the do-nothing path now says so at startup. Six unit tests and two integration tests. |
+| 24 | **The Postman collection was broken for a reviewer.** The environment's empty `accessToken` shadowed the value captured at runtime, so every authenticated request returned 401; the role-demo logins hijacked the admin session; a password-change request left the demo account altered for the next run; and a User-role profile update reused another user's `rowVersion`. | Restructured into 8 ordered folders with runtime capture, and reduced the environment to `baseUrl` alone. 42 requests, 66 assertions, run twice with zero failures. |
+| 25 | **The global focus ring never rendered on any button.** Material sets `outline: none` and its styles are injected after the global stylesheet, so a bare `:focus-visible` rule lost on equal specificity. The documented focus indicator did not exist on the controls users tab through most. | Element-qualified selectors, no `!important`. The test measures computed outline rather than trusting the stylesheet. |
+| 26 | **Accessibility and responsive layout were claimed on manual checks alone**, and honestly carried as `Partial`. | 27 axe-driven accessibility tests over 16 page states in both directions, and 36 responsive tests across four viewports. Both rows are now `Verified`, with the six areas still untested listed explicitly in [16-accessibility-audit.md](16-accessibility-audit.md). |
+
+Nine of these eleven are the same species: **something true in the code but unenforced, or something claimed in
+a document and absent from the code.** That is what a hardening pass is for. The two exceptions - the raw-key
+title and the focus ring - were behavioural defects a user would have met.
+
+### What was deliberately not changed
+
+- **No vulnerability was invented.** The security review found no new exploitable defect; the forwarded-header
+  work closed a real gap in a documented control, and everything else above is correctness or reproducibility.
+- **xUnit was not migrated**, the architecture was not redesigned, and no framework was replaced.
+- **No commit was rebased, squashed or amended**, and no `Co-Authored-By` trailer was removed. The hardening
+  work is new commits on top.
+- **No documentation was weakened to match a missing implementation.** Every claim above was resolved by
+  writing the implementation, except two where the documented *mechanism* was wrong for this stack: the literal
+  text rule (Transloco, not Angular `i18n` attributes) and the style check (a repository script, not stylelint).
+  In both cases the requirement was implemented and the mechanism named accurately.
+
+## 6. Design documents corrected by implementation
 
 The Phase 1 documents were written before the code and were wrong in places. Rather than quietly editing
 them, the corrections are recorded:
@@ -175,10 +220,12 @@ them, the corrections are recorded:
 | 02-architecture | Interceptor ordering rationale was inverted (see section 4.3). Validation location moved to the API layer. Two exception handlers, not eight. |
 | 02-architecture / 07-authorization | The soft-delete opt-out has three justified consumers, not two. |
 | 05-database-model | Identifiers are client-generated version 7 GUIDs, not `NEWSEQUENTIALID` defaults - which is what allows audit rows to be written inside the same transaction. Roles are seeded by the migration, not the seeder. |
-| 03-project-structure | `.slnx`, `NuGet.config`, real file names, `TestSupport` naming, `IUnitOfWork` implemented by the DbContext. |
+| 03-project-structure | `.slnx`, `NuGet.config`, real file names, `TestSupport` naming, `IUnitOfWork` implemented by the DbContext. The frontend tree was redrawn in the hardening pass: it had listed folders and specs that never existed and omitted several that do. |
 | 12-decision-log | Four ADRs added during implementation (0018-0020 plus the ADR-0009 reversal), each with the reasoning that produced it. |
+| 09-localization-plan | Two enforcement mechanisms were named that did not exist, and the localized page titles were not implemented at all. All three are now real; see section 5, items 18 and 22. |
+| 08-security-plan / README | The forwarded-header handling described in the threat model was not implemented. It is now, opt-in, with tests (section 5, item 23). |
 
-## 6. What a reviewer should look at first
+## 7. What a reviewer should look at first
 
 If time is short, these five files carry most of the reasoning:
 

@@ -7,6 +7,12 @@ narration over a static screen.
 and the SPA (`npm start` in `frontend/`), and have Swagger open in a second tab. Sign out first, so the
 recording starts at the sign-in screen.
 
+**One deliberate deviation from the obvious running order:** soft delete comes *before* the audit trail. The
+reverse order is more natural to describe, but it means opening the audit screen before the deletion has
+happened — so the most interesting rows are missing from the very screen meant to show them. Deleting first
+means the audit segment displays a complete lifecycle (created, updated, role changed, deleted, restored) that
+the viewer just watched happen, which is the whole point of that minute.
+
 ---
 
 ## 0:00–0:30 · Sign in
@@ -55,16 +61,17 @@ recording starts at the sign-in screen.
    *Hiding a button is courtesy. The server refuses the same operations, and the test suite proves it for all
    three roles across every mutating endpoint.*
 
-## 2:45–3:30 · User profile
+## 2:45–3:15 · User profile and password change
 
 1. Still as `readonly`, open **Profile**. Update the first name and save.
 2. Point at what is **not** there: no role control, and the note explaining that an administrator sets it.
    *The profile model has no role field at all, so self-elevation is not something the UI declines — it is
    something the contract cannot express.*
-3. Optional, if time allows: change the password, then show that the session ends and a fresh sign-in with the
-   new password works.
+3. Change the password on the same page: enter the current one, then a new one. The confirmation says other
+   sessions have been signed out — say that out loud, because it is the security behaviour, not a nicety:
+   *a password change revokes every refresh-token family for that user.*
 
-## 3:30–4:00 · Soft delete
+## 3:15–3:50 · Soft delete and restore
 
 1. Back as `admin`. Delete the user created earlier — the confirmation dialog names the consequence
    ("their history is kept and an administrator can restore them").
@@ -74,7 +81,7 @@ recording starts at the sign-in screen.
 5. Say it: *no user is ever physically deleted through the API. Deleting the same user twice answers `409`,
    not `404` — an administrator needs to tell "already gone" from "never existed".*
 
-## 4:00–4:30 · Audit trail
+## 3:50–4:25 · Audit trail
 
 1. Open **Audit**. The lifecycle just performed is there, newest first: created, updated, role changed,
    deleted, restored.
@@ -84,7 +91,7 @@ recording starts at the sign-in screen.
 4. Point at the target column: it shows the username **and the user id**. *The id is the identity — usernames
    are released when a user is deleted, so the trail stays unambiguous even if the name is reused later.*
 
-## 4:30–5:00 · Arabic, RTL, and the API
+## 4:25–5:00 · Arabic, RTL, and the API
 
 1. Click the translate button. The whole interface flips to Arabic, **right to left**, including the table,
    the paginator and the sort arrows.

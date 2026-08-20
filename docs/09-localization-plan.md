@@ -90,9 +90,25 @@ special cases.
 ### What is localized
 
 Labels, buttons, table headers, column headers, placeholders, validation messages, empty and error states,
-toasts, confirmation dialogs, navigation, page titles (via a title strategy), the role filter options, audit
-action names, and `aria-label`s. A lint rule flags literal text in templates so untranslated strings are
-caught in review.
+toasts, confirmation dialogs, navigation, browser tab titles, the role filter options, audit action names, and
+`aria-label`s.
+
+Two mechanisms keep that list honest rather than aspirational:
+
+- **Literal text in a template is a lint error.** `@angular-eslint/template/i18n` runs with `checkText`, and
+  because every string here comes from a Transloco key, any text left in markup is by definition untranslated.
+  `src/index.html` is exempt: its `<title>` is what a browser tab shows before Angular boots, when there is no
+  locale to translate into yet.
+- **Browser tab titles go through `TranslatedTitleStrategy`** (`core/i18n/`). Route definitions carry a
+  translation *key*, not a sentence - and the keys are the ones the pages already use for their headings, so a
+  tab title cannot drift from the page it names. The strategy also re-applies the title on `langChanges$`,
+  because switching language does not re-run the router; without that the tab would keep the previous locale's
+  title for the rest of the session.
+
+Route titles were the one piece of user-visible text outside every template, and they were literal English
+until the submission-hardening pass. `src/app/route-titles.spec.ts` now asserts that each of the seven declared
+titles is a dotted key that both catalogues resolve - a check the strategy alone cannot make, since literal
+text resolves to itself and looks perfectly correct in an English session.
 
 ### Locale persistence and startup
 
@@ -106,7 +122,7 @@ outbound request through the API client, so backend messages match the UI withou
 | Concern | Approach |
 |---|---|
 | Document direction | `LocaleService` sets `dir` and `lang` on `<html>`; Angular Material and CDK components read direction from `Directionality`, so overlays, menus, date pickers, sort arrows and the paginator flip automatically |
-| Layout | CSS **logical properties** throughout: `margin-inline-start`, `padding-inline-end`, `inset-inline-start`, `text-align: start`. No `left`/`right` in application styles; a stylelint rule enforces it |
+| Layout | CSS **logical properties** throughout: `margin-inline-start`, `padding-inline-end`, `inset-inline-start`, `text-align: start`. No `left`/`right` in application styles, enforced by `npm run lint:styles` over both `.scss` files and inline component styles; an exception needs an explicit `/* physical: reason */` marker on the line |
 | Icons | Directional icons (back/forward, chevrons) flip with `transform: scaleX(-1)` under `[dir="rtl"]`; non-directional icons (delete, edit) never flip |
 | Tables | Column order reverses naturally with `dir`; numeric columns keep `text-align: end` in both directions so figures stay aligned |
 | Numbers and dates | `Intl` formatting through the locale; Arabic uses `ar` formatting with Latin digits (`ar-u-nu-latn`) because the audit trail and IP addresses are read alongside English logs. Recorded as ADR-0007 |
@@ -121,7 +137,10 @@ outbound request through the API client, so backend messages match the UI withou
 | No missing Arabic keys (frontend) | catalogue parity test comparing the key sets of `en.json` and `ar.json` |
 | Localized API errors | integration test posting an invalid user with `Accept-Language: ar` and asserting an Arabic `title` plus an unchanged `errorCode` |
 | Direction switching | component test asserting `document.documentElement.dir` becomes `rtl` after switching to Arabic and back |
-| No hard-coded strings | lint rule for literal text in templates |
+| No hard-coded strings | `@angular-eslint/template/i18n` with `checkText` (`npm run lint`), proven to fire by `npm run lint:verify` |
+| No literal route titles | `route-titles.spec.ts`: every declared title is a dotted key resolving in both catalogues |
+| Tab title follows the language | `translated-title.strategy.spec.ts`: navigates for real, switches to Arabic, and asserts the title changes without a second navigation |
+| No physical direction properties | `npm run lint:styles` over `.scss` and inline component styles |
 | Visual RTL sanity | manual pass on Login, Users, Create/Edit, Profile and Audit at desktop and mobile widths, captured in the Phase 8 evidence notes |
 
 ## 6. Known limitations

@@ -13,8 +13,17 @@ npm test --prefix frontend      55 passed
 npm run e2e --prefix frontend   14 passed
 ```
 
-Two rows are deliberately **not** marked `Verified`, and say why in place: accessibility (manual checks only,
-no automated audit) and the frontend's own responsive coverage beyond the one width the browser suite asserts.
+Both rows that were previously `Partial` - accessibility and responsive layout - were closed during the
+submission-hardening pass with automated audits and are now `Verified`; the untested areas of the accessibility
+audit are enumerated in [16-accessibility-audit.md](16-accessibility-audit.md) section 5 rather than hidden
+behind the word.
+
+**Nothing is `Partial`. One row is `Not Implemented`: J-15, the demo recording.** The script for it is written
+and every screen it calls for works, but a video is a human deliverable and none is included here. It is listed
+as missing rather than quietly dropped from the matrix.
+
+The hardening pass also added: forwarded-header handling (opt-in, with tests), an audit-policy conformance
+test, error-response disclosure tests, and log-redaction tests. Those rows carry phase 10.
 
 ## A. Architecture and code organisation
 
@@ -108,7 +117,7 @@ no automated audit) and the frontend's own responsive coverage beyond the one wi
 | F-03 | 13 | No secrets in audit payloads | Redaction and never-persist lists specified in [13-audit-policy.md](13-audit-policy.md), enforced by three tests | 5 | Verified |
 | F-13 | added | A written audit policy: entities, operations, captured/redacted/never-stored fields | [13-audit-policy.md](13-audit-policy.md) is normative; the interceptor is written against it (ADR-0014) | 1, 5 | **Done** |
 | F-04 | 13 | Audit records protected from modification through the app | Read-only surface: no update/delete endpoints; Admin-only read | 5 | Verified |
-| F-05 | 14 | IP captured from request context, proxy-aware but not blindly trusted | `IClientInfoProvider`; ForwardedHeaders only with configured known proxies | 5 | Verified |
+| F-05 | 14 | IP captured from request context, proxy-aware but not blindly trusted | `IClientInfoProvider` reads the connection address. `X-Forwarded-For` is processed **only** when a deployment names the proxies it trusts (`ForwardedHeaders:KnownProxies`/`KnownNetworks`); two tests pin both halves - ignored by default, honoured when configured | 5, 10 | Verified |
 | F-06 | 15 | Created/modified stamps centralised | `AuditableEntitySaveChangesInterceptor` | 2 | Verified |
 | F-07 | 30 | Structured logging | Serilog: console + rolling file, JSON in production | 2 | Verified |
 | F-08 | 30 | Log failed logins (username, timestamp, IP, reason category) | `LoginFailed` event; never the password or hash | 3 | Verified |
@@ -128,23 +137,23 @@ no automated audit) and the frontend's own responsive coverage beyond the one wi
 | G-05 | 19 | Centralised exception handling, no per-action try/catch | `IExceptionHandler` chain registered once | 6 | Verified |
 | G-06 | 19 | Expected business errors distinguished from unexpected failures | Typed exceptions -> 4xx; everything else -> 500 | 6 | Verified |
 | G-07 | 32 | Swagger/OpenAPI documenting models, auth, errors, status codes | Swashbuckle + XML comments + JWT bearer scheme + examples | 9 | Verified |
-| G-08 | 33 | Postman collection with folders and environment variables | `postman/` collection + environment (`baseUrl`, `token`, `userId`) | 9 | Verified |
+| G-08 | 33 | Postman collection with folders and environment variables | `postman/` collection: 8 ordered folders, 42 requests, 66 assertions, run twice through newman with zero failures. The environment holds `baseUrl` alone - everything else is captured at runtime by test scripts, because an empty `accessToken` in the environment shadows the captured one and 401s every authenticated request | 9, 10 | Verified |
 
 ## H. Localization and UX
 
 | ID | Spec | Requirement | Planned implementation | Phase | Status |
 |---|---|---|---|---|---|
 | H-01 | 21 | Backend localization of validation and business errors (en/ar) | `.resx` + `IStringLocalizer` keyed by stable error codes | 6 | Verified |
-| H-02 | 21 | Frontend localization of all UI text | Transloco JSON catalogues `en.json` / `ar.json` (ADR-0007) | 7 | Verified |
-| H-03 | 21 | Correct RTL direction switching for Arabic | `dir` on `<html>` + CDK `Directionality`; logical CSS properties | 7 | Verified |
+| H-02 | 21 | Frontend localization of all UI text | Transloco JSON catalogues `en.json` / `ar.json` (ADR-0007), catalogue-parity test, and a lint error on any literal text left in a template. Browser tab titles go through `TranslatedTitleStrategy`: route definitions carry translation keys, and `route-titles.spec.ts` proves all seven resolve in both catalogues. The titles were literal English until phase 10 - they were the only user-visible text outside a template | 7, 10 | Verified |
+| H-03 | 21 | Correct RTL direction switching for Arabic | `dir` on `<html>` + CDK `Directionality`; logical CSS properties, enforced by `npm run lint:styles` over `.scss` and inline styles; 36 responsive tests re-run the whole layout in Arabic | 7, 10 | Verified |
 | H-04 | 22 | Standalone Angular structure with core/shared/features/layout | See [03-project-structure.md](03-project-structure.md) | 7 | Verified |
 | H-05 | 22 | Lazy-loaded feature areas | `loadChildren` per feature route | 7 | Verified |
 | H-06 | 23 | Login page, auth service, interceptor, guards, 401/403 handling | `core/auth` + `core/interceptors` | 7 | Verified |
 | H-07 | 25 | Login, Users, Create/Edit, Profile, Audit screens | `features/*` | 7 | Verified |
 | H-08 | 25 | Loading, empty and error states on the user list | `LoadingBar`, `EmptyState`, `ErrorState` components | 7 | Verified |
 | H-09 | 25 | Reactive forms for create/edit and profile | Typed `FormGroup` with async uniqueness validators | 7 | Verified |
-| H-10 | 26 | Responsive on desktop, tablet and mobile | Fluid layouts, wide tables scrolling inside their own container, filters and forms stacking under 768px, navigation collapsing into a menu | 7 | **Partial** — 375px is asserted by a browser test (no horizontal page scroll, rows visible) and desktop was exercised throughout; tablet widths were eyeballed, not asserted |
-| H-11 | 54 | Accessibility | Labels on every control, focus trapped and restored by Material dialogs, live regions on the sign-in failure and the loading/error panels, visible focus ring, `bdi` around bidirectional text. One real defect fixed: the password-toggle button shared its accessible name with the input | 7 | **Partial** — manually checked and one defect fixed; no automated axe-core audit was run, so this is not claimed as verified |
+| H-10 | 26 | Responsive on desktop, tablet and mobile | 36 browser tests across 375x812, 768x1024, 1024x768 and 1440x900: no horizontal page overflow, no element outside the viewport, navigation reachable, table scrolling inside its own container, pagination usable, forms submittable, dialogs inside the viewport, and Arabic RTL intact at every width | 7, 10 | Verified |
+| H-11 | 54 | Accessibility | axe-core through Playwright: 16 page states in both directions, zero violations at any impact level, plus 11 tests for keyboard, focus, live-region and table-semantics behaviour axe cannot check. Two real defects found and fixed. Full scope and the six untested areas in [16-accessibility-audit.md](16-accessibility-audit.md) | 7, 10 | Verified |
 | H-12 | added | Toolchain pinned and documented | `frontend/.nvmrc` = `24`, `engines` in `package.json`, README prerequisite; Angular/Material/CDK all on major 21 (ADR-0017) | 7 | Verified |
 
 ## I. Security review
@@ -174,8 +183,10 @@ no automated audit) and the frontend's own responsive coverage beyond the one wi
 | J-09 | 52 | Final traceability matrix, nothing claimed without verification | This file, completed in Phase 10 | 10 | Verified |
 | J-10 | 55 | 41-item final quality gate all green | Gate checklist executed in Phase 10 | 10 | Verified |
 | J-11 | 59 | 5-minute demo script | `docs/14-demo-script.md` | 9 | Verified |
-| J-12 | added | Browser smoke coverage | Five Playwright specs, Chromium only, guardrailed (ADR-0015) | 8 | Verified |
+| J-12 | added | Browser coverage | 78 Playwright tests over seven specs, Chromium only (ADR-0015): 15 smoke, 27 accessibility, 36 responsive | 8, 10 | Verified |
 | J-13 | added | Concurrency, audit-redaction, soft-delete-authorization and refresh-rotation tests | Named in [10-testing-plan.md](10-testing-plan.md) | 8 | Verified |
+| J-14 | added | Frontend boundaries enforced, not merely documented | `import-x/no-restricted-paths` for all four boundary rules, plus bans on `bypassSecurityTrust*` and stray `localStorage` writes; `npm run lint:verify` lints nine deliberate violations to prove the rules fire | 10 | Verified |
+| J-15 | 59 | **Demo recording** | Not produced. [14-demo-script.md](14-demo-script.md) is a shot-by-shot script with timings for the five minutes, and every screen and behaviour it calls for is present in the running application - but recording it is a human act, and no video is included in this repository | 9 | **Not Implemented** |
 
 ## Deliberate additions beyond the literal assignment
 
@@ -186,7 +197,8 @@ Each is small, justified, and recorded as an ADR so a reviewer sees intent rathe
 | Refresh-token rotation with httpOnly cookie, organised into token families | Keeps the access token out of web storage while surviving page reload; families make reuse detection revoke one lineage rather than every session | ADR-0005 |
 | Optimistic concurrency (`rowversion`) | Two Admins editing one user is routine; without it the second save silently destroys the first and the audit trail lies about it | ADR-0013 |
 | Written audit policy | Makes "what is audited and what is never stored" reviewable without reading the interceptor | ADR-0014 |
-| Five-spec Playwright smoke suite | Proves the SPA and API meet in a browser — the one thing neither component nor API tests can show | ADR-0015 |
+| Playwright browser suite | Proves the SPA and API meet in a browser — the one thing neither component nor API tests can show. Grew from five smoke specs to 78 tests once accessibility and responsive layout needed real evidence rather than a claim | ADR-0015 |
+| Frontend architecture lint rules, with a script that proves they fire | The four boundaries were documented as enforced and were not. A clean lint run is ambiguous - on the first run every rule was silently inert for want of a TypeScript-aware resolver | ADR-0002 |
 | Availability endpoint for async form validation | Removes end-of-form uniqueness surprises without a request per keystroke | ADR-0016 |
 | Account lockout + auth rate limiting | Assignment section 49 invites account-security rules; covers OWASP A07 | ADR-0006 |
 | `POST /api/users/me/change-password` | A user-management module without a self-service password change is incomplete; forces current-password proof and revokes refresh tokens | ADR-0008 |
@@ -197,7 +209,7 @@ Each is small, justified, and recorded as an ADR so a reviewer sees intent rathe
 
 | Not doing | Why |
 |---|---|
-| End-to-end coverage beyond five smoke specs | Deep flows stay at the component and API layers where they do not flake; the smoke suite only proves the pieces meet (ADR-0015). |
+| End-to-end coverage of every flow in the browser | Deep flows stay at the component and API layers where they do not flake. The browser suite covers what only a browser can answer: that the pieces meet, that the interface is accessible, and that it holds together at four viewport widths in both directions (ADR-0015). |
 | Audit retention / archival job | Retention is the operator's policy decision; the schema supports it (indexed `Timestamp`) but guessing a window would be wrong. Known limitation. |
 | Email verification / password reset by email | No mail infrastructure in scope; would add an unverifiable dependency. |
 | Multi-factor authentication | Not requested; lockout and rate limiting cover the stated auth risks. |
