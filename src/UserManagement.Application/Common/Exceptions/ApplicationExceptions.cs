@@ -1,0 +1,69 @@
+using UserManagement.Domain.Constants;
+
+namespace UserManagement.Application.Common.Exceptions;
+
+/// <summary>
+/// Base type for expected failures raised by a use case. Carrying a stable
+/// <see cref="ErrorCodes">error code</see> is what lets the API map the failure to a status and a localized
+/// message without string-matching an exception message.
+/// </summary>
+public abstract class ApplicationLayerException(string errorCode, string message) : Exception(message)
+{
+    public string ErrorCode { get; } = errorCode;
+}
+
+/// <summary>The target does not exist, or is not visible to this caller. Maps to 404.</summary>
+public sealed class NotFoundException(string message, string errorCode = ErrorCodes.ResourceNotFound)
+    : ApplicationLayerException(errorCode, message)
+{
+    public static NotFoundException User(Guid id) => new($"User '{id}' was not found.");
+}
+
+/// <summary>The request conflicts with current state. Maps to 409.</summary>
+public sealed class ConflictException(string errorCode, string message)
+    : ApplicationLayerException(errorCode, message)
+{
+    public static ConflictException UsernameTaken(string username) =>
+        new(ErrorCodes.UsernameAlreadyExists, $"Username '{username}' is already taken.");
+
+    public static ConflictException EmailTaken(string email) =>
+        new(ErrorCodes.EmailAlreadyExists, $"Email '{email}' is already taken.");
+
+    public static ConflictException LastAdmin() =>
+        new(ErrorCodes.LastAdminCannotBeRemoved, "The last active administrator cannot be removed or demoted.");
+}
+
+/// <summary>
+/// The caller is authenticated but not permitted to do this. Maps to 403 - distinct from a role check failing
+/// at the policy layer, which never reaches a handler.
+/// </summary>
+public sealed class ForbiddenOperationException(string errorCode, string message)
+    : ApplicationLayerException(errorCode, message)
+{
+    public static ForbiddenOperationException SelfDelete() =>
+        new(ErrorCodes.CannotDeleteSelf, "A user cannot delete their own account.");
+}
+
+/// <summary>
+/// The payload is well formed but semantically invalid. Maps to 422, which is the honest code for "I understood
+/// the request and it is still not allowed" - as distinct from a malformed body (400) or a state clash (409).
+/// </summary>
+public sealed class UnprocessableEntityException(string errorCode, string message)
+    : ApplicationLayerException(errorCode, message)
+{
+    public static UnprocessableEntityException OwnRoleChange() =>
+        new(ErrorCodes.CannotChangeOwnRole, "A user cannot change their own role.");
+}
+
+/// <summary>
+/// One or more fields failed validation. Maps to 400 with a per-field <c>errors</c> dictionary, so a form can
+/// show the message next to the field that caused it instead of a single banner.
+/// </summary>
+public sealed class ValidationException(IDictionary<string, string[]> errors)
+    : ApplicationLayerException(ErrorCodes.ValidationError, "One or more validation errors occurred.")
+{
+    public IDictionary<string, string[]> Errors { get; } = errors;
+
+    public static ValidationException ForField(string field, string message) =>
+        new(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { [field] = [message] });
+}

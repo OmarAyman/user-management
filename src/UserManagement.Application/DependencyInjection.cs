@@ -1,21 +1,17 @@
 using System.Reflection;
-using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace UserManagement.Application;
 
 /// <summary>
-/// Composition for the Application layer. Registers use-case handlers and validators; it deliberately knows
-/// nothing about how persistence, hashing or token issuing are implemented.
+/// Composition for the Application layer. Registers the use-case handlers; it deliberately knows nothing about
+/// how persistence, hashing or token issuing are implemented, and nothing about HTTP.
 /// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        var assembly = Assembly.GetExecutingAssembly();
-
-        services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
-        services.AddUseCaseHandlers(assembly);
+        services.AddUseCaseHandlers(Assembly.GetExecutingAssembly());
 
         return services;
     }

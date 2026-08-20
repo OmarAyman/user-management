@@ -7,9 +7,12 @@
   <ItemGroup>
     <!-- Validation is a use-case concern, so it lives here. Note the absence of any
          Microsoft.AspNetCore.* or EntityFrameworkCore package: an architecture test enforces it. -->
-    <PackageReference Include="FluentValidation" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <!-- No FluentValidation reference: shape validation happens at the API boundary, where the validated
+         request record exists. Business rules are enforced by the handlers in this project. -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <!-- Abstractions only: handlers consume IOptions and ILogger, and neither drags in a hosting concern. -->
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
 </Project>
