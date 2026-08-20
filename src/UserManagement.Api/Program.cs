@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -152,6 +152,16 @@ builder.Services.AddCors(options => options.AddPolicy(
         .AllowCredentials()));
 
 var app = builder.Build();
+
+// First in the pipeline, and only when a deployment names the proxies it trusts: everything downstream that
+// reads the client address - the audit trail, the failed-login logs, the rate limiter's partition key - must
+// see the real caller, and must not see a header any client could have written.
+var forwardedHeaders = ForwardedHeadersConfiguration.TryBuild(app.Configuration, startupLogger);
+
+if (forwardedHeaders is not null)
+{
+    app.UseForwardedHeaders(forwardedHeaders);
+}
 
 app.UseSerilogRequestLogging();
 app.UseMiddleware<CorrelationIdMiddleware>();
