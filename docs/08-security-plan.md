@@ -91,9 +91,15 @@ and named security events (`LoginFailed`, `LoginSucceeded`, `RoleChanged`, `User
 `RefreshTokenReuseDetected`, `AccountLocked`).
 
 **Never logged:** passwords, password hashes, access tokens, refresh tokens (raw or hashed), cookies,
-`Authorization` headers, or full request bodies for auth endpoints. Enforced by a Serilog destructuring
-policy plus a unit test that runs a login failure through a capturing sink and asserts the password string is
-absent from the output.
+`Authorization` headers, or full request bodies for auth endpoints.
+
+The guarantee comes from construction rather than filtering: no code path passes a credential to a logger, and
+request bodies are not logged at all. Because that is one helpful log line away from being false, it is
+asserted rather than trusted — `SensitiveDataLoggingTests` runs sign-in (failed, unknown user, successful,
+locked out) and the password change through a capturing logger that records **structured values as well as
+rendered text**, and asserts the password, the stored hash, the access token and the refresh token are all
+absent. Structured values matter here: a credential can leak through a template parameter that never appears
+in a console line but does reach a JSON sink.
 
 The same prohibition applies to the audit trail, where it is specified normatively rather than left to
 judgement: [13-audit-policy.md](13-audit-policy.md) lists what is captured, what is redacted to `"***"`, and

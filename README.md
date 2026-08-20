@@ -6,7 +6,7 @@ delete, an append-only audit trail, and English/Arabic localization with right-t
 
 | | |
 |---|---|
-| **Backend tests** | 94 unit, 145 integration (real SQL Server via Testcontainers) |
+| **Backend tests** | 99 unit, 145 integration (real SQL Server via Testcontainers) |
 | **Frontend tests** | 55 unit/component (Vitest), 14 browser smoke (Playwright) |
 | **Build** | zero warnings, warnings-as-errors on |
 
@@ -47,7 +47,7 @@ What the implementation is actually trying to demonstrate:
 
 - **Security decisions with reasons.** The access token never touches web storage, refresh tokens rotate and
   detect reuse, sign-in cannot be used to discover whether an account exists, and the two attacks the brief
-  names — IDOR and mass assignment — are prevented by the shape of the routes and models rather than by
+  names - IDOR and mass assignment - are prevented by the shape of the routes and models rather than by
   checks somebody has to remember.
 - **Rules that cannot be bypassed.** Authorization is server-side, auditing is a property of persistence
   rather than of the caller, and the soft-delete filter is on by default with a single, tested opt-out.
@@ -74,14 +74,14 @@ UserManagement.Infrastructure EF Core, SQL Server, hashing, JWT, audit intercept
 | Project | May reference | Enforced by |
 |---|---|---|
 | `Domain` | nothing | architecture test |
-| `Application` | `Domain` only — no EF Core, no ASP.NET Core | architecture test |
+| `Application` | `Domain` only - no EF Core, no ASP.NET Core | architecture test |
 | `Infrastructure` | `Application`, `Domain` | project references |
 | `Api` | all three, but touches `Infrastructure` only in its composition root | architecture test |
 
 Three tests assert this, so a violation fails the build rather than a review. Full detail in
 [docs/02-architecture.md](docs/02-architecture.md).
 
-Use cases are one folder each — command/query, handler, DTO — injected directly into controllers. No
+Use cases are one folder each - command/query, handler, DTO - injected directly into controllers. No
 mediator: validation runs as an action filter and auditing as an EF interceptor, which are the two concerns a
 pipeline would otherwise exist for ([ADR-0003](docs/12-decision-log.md)).
 
@@ -94,7 +94,7 @@ pipeline would otherwise exist for ([ADR-0003](docs/12-decision-log.md)).
 | Persistence | EF Core 10, SQL Server 2022, migrations, global query filters, save-changes interceptors |
 | Security | `PasswordHasher<T>` (PBKDF2-HMAC-SHA512), JWT bearer, rotating opaque refresh tokens |
 | Validation | FluentValidation at the transport boundary |
-| Logging | Serilog — console plus a rolling JSON file |
+| Logging | Serilog - console plus a rolling JSON file |
 | Frontend | Angular 21 standalone + zoneless, Angular Material 21, Transloco, typed Reactive Forms |
 | Tests | xUnit, NSubstitute, Testcontainers, Vitest, Angular testing utilities, Playwright |
 
@@ -142,7 +142,7 @@ sqlcmd -S localhost -E -d UserManagement -i database/002_seed.sql
 
 `001_schema.sql` is **generated from the migrations** by `database/generate-schema-script.ps1`, so the script
 and the model cannot drift. It is idempotent, and it carries a `SET QUOTED_IDENTIFIER ON` header for a
-concrete reason: SQL Server refuses to create a filtered index — or to insert into a table that has one —
+concrete reason: SQL Server refuses to create a filtered index - or to insert into a table that has one - 
 without it, and `sqlcmd` does not set it by default. `002_seed.sql` contains PBKDF2 hash literals produced by
 the application's own hasher; **no plaintext password appears in any script**.
 
@@ -153,7 +153,7 @@ uses.
 
 Secrets are never committed. `appsettings.json` ships empty, `appsettings.example.json` documents the shape
 with placeholders, and `appsettings.Development.json` carries only a local Windows-auth connection string and
-the demo passwords — no signing key.
+the demo passwords - no signing key.
 
 ```bash
 # Development: optional. With no key configured the API generates an ephemeral one at startup and says so,
@@ -170,9 +170,9 @@ export ConnectionStrings__DefaultConnection="Server=...;Database=UserManagement;
 | `Jwt` | Issuer, audience, signing key, access-token lifetime (15 minutes) |
 | `RefreshToken` | Cookie name, path, `Secure` flag, lifetime (7 days) |
 | `Lockout` | Failed attempts before lockout (5) and its duration (15 minutes) |
-| `PasswordPolicy` | Length and composition requirements (12–128, upper + lower + digit) |
+| `PasswordPolicy` | Length and composition requirements (12-128, upper + lower + digit) |
 | `RateLimiting` | Auth requests permitted per window, per client address |
-| `Cors` | Explicit SPA origins — credentials are required by the refresh cookie, so `*` is not an option |
+| `Cors` | Explicit SPA origins - credentials are required by the refresh cookie, so `*` is not an option |
 | `Seed` | Whether to create demo accounts, and their passwords |
 
 ## Running the backend
@@ -196,13 +196,13 @@ nvm use            # or otherwise ensure Node 24
 npm start
 ```
 
-The SPA runs on `http://localhost:4200` and proxies `/api` to the backend, so the browser sees one origin —
+The SPA runs on `http://localhost:4200` and proxies `/api` to the backend, so the browser sees one origin - 
 which is what lets the httpOnly refresh cookie work in development without CORS entanglement.
 
 ## Running the tests
 
 ```bash
-# Backend: 94 unit + 145 integration
+# Backend: 99 unit + 145 integration
 dotnet test
 
 # Fast loop, no Docker required
@@ -225,8 +225,13 @@ export USERMANAGEMENT_TEST_SQL="Server=localhost;Database=UserManagementTests;Tr
 ```
 
 The fixture asserts which database it connected to. That check exists because a configuration mistake once let
-the suite run green against the wrong database — a test pointed somewhere unintended is worse than a failing
+the suite run green against the wrong database - a test pointed somewhere unintended is worse than a failing
 one.
+
+**One environment quirk worth knowing:** run the frontend tests in a separate step from `dotnet test` rather
+than immediately after it. Vitest spawns a worker process per spec file, and lingering .NET test hosts can
+leave too little headroom for them, which surfaces as `Failed to start forks worker` rather than as a test
+failure. Both suites pass reliably when run one at a time.
 
 ## API documentation
 
@@ -241,7 +246,7 @@ Every endpoint declares its response types, including error shapes.
 | GET | `/api/users` | any role | Paged, searchable, sortable, role-filterable. Active users only |
 | GET | `/api/users/deleted` | **Admin** | The only read path over soft-deleted users |
 | GET | `/api/users/availability` | authenticated | Boolean check for async form validation |
-| GET | `/api/users/me` | authenticated | No id in the route — the subject comes from the token |
+| GET | `/api/users/me` | authenticated | No id in the route - the subject comes from the token |
 | PUT | `/api/users/me` | authenticated | First name, last name, email. No role field exists |
 | POST | `/api/users/me/change-password` | authenticated | Requires the current password |
 | GET | `/api/users/{id}` | any role | Admins also see deleted users |
@@ -272,7 +277,7 @@ work with.
 
 ## Authorization matrix
 
-Enforced server-side. The table below is also a **test** — a `[Theory]` calls every mutating endpoint as all
+Enforced server-side. The table below is also a **test** - a `[Theory]` calls every mutating endpoint as all
 three roles, so a capability cannot widen quietly.
 
 | Capability | Admin | User | ReadOnlyUser |
@@ -296,7 +301,7 @@ Two rows a reviewer usually asks about:
 - **Nobody changes their own role, administrators included.** The profile model has no role field, and an
   administrator editing themselves through the admin route gets `422 CANNOT_CHANGE_OWN_ROLE`.
 
-The frontend hides controls a role cannot use, which is courtesy rather than security — the browser smoke
+The frontend hides controls a role cannot use, which is courtesy rather than security - the browser smoke
 suite calls the API directly with a read-only token and asserts `403` on each refused operation.
 
 ## Localization
@@ -305,12 +310,12 @@ English and Arabic, on both sides, with right-to-left support.
 
 - **Backend:** `.resx` resources resolved per request from `?culture=` or `Accept-Language`. Validation
   messages, business errors and authentication failures are all localized. A parity test fails the build if a
-  key is missing from either file, or if an Arabic value contains no Arabic characters — a missing translation
+  key is missing from either file, or if an Arabic value contains no Arabic characters - a missing translation
   otherwise falls back to English silently.
 - **Frontend:** Transloco with runtime JSON catalogues, so the language switches without a reload. Direction
   is set once on `<html>`; Angular Material and the CDK read it from there, so overlays, sort arrows and the
   paginator mirror without any component knowing about it.
-- **Styling:** logical properties only (`margin-inline-start`, `text-align: start`) — no `left`/`right` in
+- **Styling:** logical properties only (`margin-inline-start`, `text-align: start`) - no `left`/`right` in
   application CSS. Emails, usernames and IP addresses are wrapped in `<bdi>` so bidirectional reordering
   cannot mangle them.
 - **Contract:** error codes are never translated. The SPA maps them to its own catalogue, with a mandatory
@@ -327,7 +332,7 @@ docker compose up --build
 
 This starts SQL Server 2022 and the API on `http://localhost:5080`, applies migrations and seeds the demo
 accounts. The API waits for the database's health check, so migrations do not race the engine's startup on a
-cold volume. The container runs as a non-root user and has no default signing key — the startup guard refuses
+cold volume. The container runs as a non-root user and has no default signing key - the startup guard refuses
 to boot in Production without one, which is the behaviour you want from a carelessly configured deployment.
 
 The SPA is still run with `npm start`: someone evaluating an Angular application wants the dev server.
@@ -339,9 +344,9 @@ postman/UserManagement.postman_collection.json
 postman/UserManagement.postman_environment.json
 ```
 
-Import both, then run **Authentication → Login (Admin)** first: its test script captures the access token and,
+Import both, then run **Authentication â†’ Login (Admin)** first: its test script captures the access token and,
 later, the created user's id and concurrency token, so nothing has to be copied by hand. The refresh token
-never appears in a response body — Postman keeps the httpOnly cookie in its own jar, which is why *Refresh
+never appears in a response body - Postman keeps the httpOnly cookie in its own jar, which is why *Refresh
 session* needs no input.
 
 Beyond the happy paths, the collection includes the requests worth showing a reviewer: a wrong password, an
@@ -351,38 +356,38 @@ invalid sort field, a stale concurrency token, and the mass-assignment payload t
 
 ```text
 user-management/
-├── UserManagement.slnx
-├── Directory.Build.props        nullable, warnings-as-errors, analyzers - in one place
-├── Directory.Packages.props     central package versions
-├── NuGet.config                 nuget.org only, so a clone is reproducible
-├── docker-compose.yml           api + SQL Server
-├── database/
-│   ├── 001_schema.sql           GENERATED from the migrations
-│   ├── 002_seed.sql             demo accounts, hash literals only
-│   ├── 003_sample_queries.sql   the queries the app issues, with the index each uses
-│   └── generate-schema-script.ps1
-├── docs/                        the design set, ADRs, audit policy, demo script
-├── postman/
-├── src/
-│   ├── UserManagement.Api/           controllers, contracts, validators, error handling, middleware
-│   ├── UserManagement.Application/   features/<area>/<use case>/, ports, common models
-│   ├── UserManagement.Domain/        entities, enums, constants, invariants
-│   └── UserManagement.Infrastructure/persistence, interceptors, repositories, security, seeding
-├── tests/
-│   ├── UserManagement.UnitTests/         domain, handlers, auditing, architecture
-│   └── UserManagement.IntegrationTests/  real SQL Server, real HTTP pipeline
-└── frontend/
-    ├── e2e/                     five Playwright smoke specs
-    └── src/app/
-        ├── core/                singletons: auth, guards, interceptors, api clients, models
-        ├── shared/              stateless components, directives
-        ├── layout/              the application shell
-        └── features/            auth, users, profile, audit - all lazy-loaded
+â”œâ”€â”€ UserManagement.slnx
+â”œâ”€â”€ Directory.Build.props        nullable, warnings-as-errors, analyzers - in one place
+â”œâ”€â”€ Directory.Packages.props     central package versions
+â”œâ”€â”€ NuGet.config                 nuget.org only, so a clone is reproducible
+â”œâ”€â”€ docker-compose.yml           api + SQL Server
+â”œâ”€â”€ database/
+â”‚   â”œâ”€â”€ 001_schema.sql           GENERATED from the migrations
+â”‚   â”œâ”€â”€ 002_seed.sql             demo accounts, hash literals only
+â”‚   â”œâ”€â”€ 003_sample_queries.sql   the queries the app issues, with the index each uses
+â”‚   â””â”€â”€ generate-schema-script.ps1
+â”œâ”€â”€ docs/                        the design set, ADRs, audit policy, demo script
+â”œâ”€â”€ postman/
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ UserManagement.Api/           controllers, contracts, validators, error handling, middleware
+â”‚   â”œâ”€â”€ UserManagement.Application/   features/<area>/<use case>/, ports, common models
+â”‚   â”œâ”€â”€ UserManagement.Domain/        entities, enums, constants, invariants
+â”‚   â””â”€â”€ UserManagement.Infrastructure/persistence, interceptors, repositories, security, seeding
+â”œâ”€â”€ tests/
+â”‚   â”œâ”€â”€ UserManagement.UnitTests/         domain, handlers, auditing, architecture
+â”‚   â””â”€â”€ UserManagement.IntegrationTests/ real SQL Server, real HTTP pipeline
+â””â”€â”€ frontend/
+    â”œâ”€â”€ e2e/                     five Playwright smoke specs
+    â””â”€â”€ src/app/
+        â”œâ”€â”€ core/                singletons: auth, guards, interceptors, api clients, models
+        â”œâ”€â”€ shared/              stateless components, directives
+        â”œâ”€â”€ layout/              the application shell
+        â””â”€â”€ features/            auth, users, profile, audit - all lazy-loaded
 ```
 
 ## Design decisions
 
-Recorded as ADRs in [docs/12-decision-log.md](docs/12-decision-log.md) — 20 of them, each with the
+Recorded as ADRs in [docs/12-decision-log.md](docs/12-decision-log.md) - 20 of them, each with the
 alternatives and the cost. The ones that shaped the code most:
 
 | Decision | Why |
@@ -402,26 +407,30 @@ alternatives and the cost. The ones that shaped the code most:
 Full threat model, OWASP 2021 mapping and residual risks in
 [docs/08-security-plan.md](docs/08-security-plan.md). In summary:
 
-- **Passwords** — PBKDF2-HMAC-SHA512 via ASP.NET Core's `PasswordHasher`, per-user salt, rehash-on-verify. No
+- **Passwords** - PBKDF2-HMAC-SHA512 via ASP.NET Core's `PasswordHasher`, per-user salt, rehash-on-verify. No
   hand-rolled cryptography. Plaintext exists only as a request field and is never assigned to an entity.
-- **Sign-in discloses nothing** — an unknown username, a wrong password and a soft-deleted account return the
+- **Sign-in discloses nothing** - an unknown username, a wrong password and a soft-deleted account return the
   same `401 INVALID_CREDENTIALS`, and verification always runs (against a dummy hash when the user does not
   exist) so timing does not separate them. `ACCOUNT_LOCKED` is returned only when the supplied password was
   *correct*, which tells a caller nothing they did not already know.
-- **Brute force** — 5-failure lockout per account plus a per-IP rate limit on `/api/auth/*`. The two answer
+- **Brute force** - 5-failure lockout per account plus a per-IP rate limit on `/api/auth/*`. The two answer
   different questions and both are kept.
-- **IDOR** — `/api/users/me` has no id segment, and `/api/users/{id}` is Admin-only. There is no code path
+- **IDOR** - `/api/users/me` has no id segment, and `/api/users/{id}` is Admin-only. There is no code path
   where a client-supplied identifier selects the row being written.
-- **Mass assignment** — request models carry only what may change, and `UnmappedMemberHandling.Disallow`
+- **Mass assignment** - request models carry only what may change, and `UnmappedMemberHandling.Disallow`
   rejects a payload with extra fields rather than silently dropping them.
-- **SQL injection** — EF Core parameterisation throughout; sorting selects a branch from a whitelist, so
+- **SQL injection** - EF Core parameterisation throughout; sorting selects a branch from a whitelist, so
   client input never becomes part of a query string.
-- **Soft-delete bypass** — a global query filter, with `IgnoreQueryFilters()` confined to one file with three
+- **Soft-delete bypass** - a global query filter, with `IgnoreQueryFilters()` confined to one file with three
   justified callers and no client-controlled parameter.
-- **Audit integrity** — append-only through the application: no update or delete exists on the repository,
+- **Audit integrity** - append-only through the application: no update or delete exists on the repository,
   the entity, or the routing table. Password and token material is redacted at write time.
-- **Secrets** — nothing real is committed; the API refuses to start in Production on a placeholder key.
-- **Errors** — a `500` carries only a code and a trace id. No stack trace, exception type, SQL or
+- **Secrets** - nothing real is committed; the API refuses to start in Production on a placeholder key.
+- **Logging** - no code path passes a password, hash or token to a logger, and request bodies are not logged.
+  Five tests run sign-in and password-change through a capturing logger and assert that none of that material
+  appears - including in structured values, which is where a credential leaks into a JSON sink without ever
+  showing up in a console line.
+- **Errors** - a `500` carries only a code and a trace id. No stack trace, exception type, SQL or
   configuration ever reaches a client.
 
 ## Known limitations
@@ -430,14 +439,14 @@ Stated rather than hidden.
 
 1. **An access token stays valid for up to 15 minutes after sign-out, deletion or a role change.** Refresh is
    revoked immediately, so the session cannot be extended, but the current token lives out its lifetime. The
-   alternative — a revocation lookup on every request — was rejected as a database hit per call.
+   alternative - a revocation lookup on every request - was rejected as a database hit per call.
 2. **Search uses a leading wildcard**, which cannot seek. Covering indexes keep it cheap at this scale; the
    scaling path is a SQL Server full-text index with `CONTAINS`.
 3. **No password reset by email.** A locked-out user waits 15 minutes or asks an administrator. Mail
    infrastructure would be an unverifiable dependency in an assessment.
 4. **No multi-factor authentication.** Not requested; lockout and rate limiting cover the stated risks.
 5. **Audit retention is not implemented.** Retention is an operator's policy decision and the schema supports
-   it (`Timestamp` is indexed descending). Audit rows contain personal data — names, emails, IP addresses —
+   it (`Timestamp` is indexed descending). Audit rows contain personal data - names, emails, IP addresses - 
    and fall under whatever regime applies to the deployment.
 6. **An operator with direct SQL access can still alter audit rows.** The mitigation is database permissions:
    the application's principal needs `INSERT` and `SELECT` on `AuditLogs` and nothing more.
@@ -448,3 +457,5 @@ Stated rather than hidden.
 9. **Arabic copy is authored, not professionally reviewed.** A native-speaker pass would be the next step.
 10. **The SPA is not containerised.** Only the API and the database are; someone reviewing an Angular
     application wants the dev server.
+
+
