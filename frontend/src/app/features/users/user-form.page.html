@@ -1,0 +1,119 @@
+<ng-container *transloco="let t">
+  <header class="page-header">
+    <h1>{{ isEdit() ? t('users.form.editTitle') : t('users.form.createTitle') }}</h1>
+  </header>
+
+  @if (submitting() || loading()) {
+    <mat-progress-bar mode="indeterminate" [attr.aria-label]="t('common.states.saving')" />
+  }
+
+  <mat-card>
+    <mat-card-content>
+      <!--
+        A stale-record conflict is shown inline and the user's edits are left on screen: discarding their work
+        or retrying blindly would recreate the lost update the concurrency token exists to prevent.
+      -->
+      @if (conflict(); as message) {
+        <p class="form-conflict" role="alert">{{ message }}</p>
+      }
+
+      @if (loadError(); as message) {
+        <p class="form-conflict" role="alert">{{ message }}</p>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ t('common.fields.username') }}</mat-label>
+          <input matInput formControlName="username" dir="auto" autocomplete="off" required />
+
+          @if (!isEdit()) {
+            <mat-hint>{{ t('users.form.usernameHint') }}</mat-hint>
+          }
+
+          @if (form.controls.username.hasError('required')) {
+            <mat-error>{{ t('users.validation.required') }}</mat-error>
+          } @else if (form.controls.username.hasError('pattern')) {
+            <mat-error>{{ t('users.validation.pattern') }}</mat-error>
+          } @else if (form.controls.username.hasError('minlength')) {
+            <mat-error>{{ t('users.validation.minlength', { requiredLength: 3 }) }}</mat-error>
+          } @else if (form.controls.username.hasError('taken')) {
+            <mat-error>{{ t('users.form.usernameTaken') }}</mat-error>
+          } @else if (form.controls.username.hasError('server')) {
+            <mat-error>{{ form.controls.username.getError('server') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ t('common.fields.email') }}</mat-label>
+          <input matInput formControlName="email" type="email" dir="auto" autocomplete="off" required />
+
+          @if (form.controls.email.hasError('required')) {
+            <mat-error>{{ t('users.validation.required') }}</mat-error>
+          } @else if (form.controls.email.hasError('email')) {
+            <mat-error>{{ t('users.validation.email') }}</mat-error>
+          } @else if (form.controls.email.hasError('taken')) {
+            <mat-error>{{ t('users.form.emailTaken') }}</mat-error>
+          } @else if (form.controls.email.hasError('server')) {
+            <mat-error>{{ form.controls.email.getError('server') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ t('common.fields.firstName') }}</mat-label>
+            <input matInput formControlName="firstName" dir="auto" required />
+            @if (form.controls.firstName.hasError('required')) {
+              <mat-error>{{ t('users.validation.required') }}</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>{{ t('common.fields.lastName') }}</mat-label>
+            <input matInput formControlName="lastName" dir="auto" required />
+            @if (form.controls.lastName.hasError('required')) {
+              <mat-error>{{ t('users.validation.required') }}</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <!-- Only on create: changing a password is its own endpoint, and only the owner can do it. -->
+        @if (!isEdit()) {
+          <mat-form-field appearance="outline">
+            <mat-label>{{ t('common.fields.password') }}</mat-label>
+            <input matInput formControlName="password" type="password" autocomplete="new-password" required />
+            <mat-hint>{{ t('users.form.passwordHint') }}</mat-hint>
+
+            @if (form.controls.password.hasError('required')) {
+              <mat-error>{{ t('users.validation.required') }}</mat-error>
+            } @else if (form.controls.password.hasError('pattern')) {
+              <mat-error>{{ t('users.validation.passwordPolicy') }}</mat-error>
+            } @else if (form.controls.password.hasError('server')) {
+              <mat-error>{{ form.controls.password.getError('server') }}</mat-error>
+            }
+          </mat-form-field>
+        }
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ t('common.fields.role') }}</mat-label>
+          <mat-select formControlName="roleId" required>
+            @for (role of roles(); track role.id) {
+              <mat-option [value]="role.id">{{ t('roles.' + role.name) }}</mat-option>
+            }
+          </mat-select>
+
+          @if (form.controls.roleId.hasError('server')) {
+            <mat-error>{{ form.controls.roleId.getError('server') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="form-actions">
+          <a matButton routerLink="/users">{{ t('common.actions.cancel') }}</a>
+
+          <button matButton="filled" type="submit" [disabled]="submitting() || form.pending">
+            {{ form.pending ? t('users.form.checking') : t('common.actions.save') }}
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</ng-container>

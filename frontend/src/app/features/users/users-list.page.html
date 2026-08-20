@@ -1,0 +1,191 @@
+<ng-container *transloco="let t">
+  <header class="page-header">
+    <div>
+      <h1>{{ t('users.list.title') }}</h1>
+      @if (page(); as result) {
+        <p class="page-subtitle">{{ t('users.list.subtitle', { count: result.totalCount }) }}</p>
+      }
+    </div>
+
+    <!--
+      Hidden for non-administrators because a control that always fails is worse than no control. The server
+      refuses the same call regardless, which is what the authorization matrix test proves.
+    -->
+    <a *appHasRole="adminRole" matButton="filled" routerLink="/users/new">
+      <mat-icon>person_add</mat-icon>
+      {{ t('users.list.createButton') }}
+    </a>
+  </header>
+
+  <mat-card class="filters-card">
+    <mat-card-content class="filters">
+      <mat-form-field appearance="outline" class="filters-search">
+        <mat-label>{{ t('common.actions.search') }}</mat-label>
+        <input
+          matInput
+          [formControl]="searchControl"
+          [placeholder]="t('users.list.searchPlaceholder')"
+          dir="auto"
+          type="search"
+        />
+        <mat-icon matPrefix>search</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filters-role">
+        <mat-label>{{ t('common.fields.role') }}</mat-label>
+        <mat-select [value]="roleId() ?? null" (valueChange)="onRoleFilterChange($event)">
+          <mat-option [value]="null">{{ t('roles.all') }}</mat-option>
+          @for (role of roles(); track role.id) {
+            <mat-option [value]="role.id">{{ t('roles.' + role.name) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Administrators only: deleted rows hold the personal data of people removed from the system. -->
+      <mat-checkbox
+        *appHasRole="adminRole"
+        [checked]="deleted()"
+        (change)="onDeletedToggle($event.checked)"
+      >
+        {{ t('users.list.showDeleted') }}
+      </mat-checkbox>
+
+      <button matButton type="button" (click)="clearFilters()">
+        {{ t('common.actions.clear') }}
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  @if (loading()) {
+    <app-loading-state />
+  } @else if (loadError(); as message) {
+    <app-error-state [message]="message" (retry)="load()" />
+  } @else if (page(); as result) {
+    @if (result.items.length === 0) {
+      <app-empty-state titleKey="users.list.emptyTitle" messageKey="users.list.emptyMessage" />
+    } @else {
+      <div class="table-scroll">
+        <table
+          mat-table
+          [dataSource]="result.items"
+          matSort
+          [matSortActive]="sortBy()"
+          [matSortDirection]="sortDirection() === 'Ascending' ? 'asc' : 'desc'"
+          (matSortChange)="onSortChange($event)"
+        >
+          <ng-container matColumnDef="username">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="username">
+              {{ t('common.fields.username') }}
+            </th>
+            <td mat-cell *matCellDef="let user">
+              <!--
+                bdi so a Latin username inside an Arabic layout is not reordered by the bidirectional
+                algorithm - the same reason emails and IP addresses are wrapped below.
+              -->
+              <bdi>{{ user.username }}</bdi>
+              <div class="cell-secondary">{{ user.firstName }} {{ user.lastName }}</div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="email">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="email">
+              {{ t('common.fields.email') }}
+            </th>
+            <td mat-cell *matCellDef="let user"><bdi>{{ user.email }}</bdi></td>
+          </ng-container>
+
+          <ng-container matColumnDef="role">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="role">
+              {{ t('common.fields.role') }}
+            </th>
+            <td mat-cell *matCellDef="let user">{{ roleLabel(user.role) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>{{ t('common.fields.status') }}</th>
+            <td mat-cell *matCellDef="let user">
+              @if (user.isLockedOut) {
+                <mat-chip highlighted color="warn">{{ t('users.list.lockedOut') }}</mat-chip>
+              } @else {
+                <mat-chip>{{ t('users.list.active') }}</mat-chip>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="createdAt">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="createdAt">
+              {{ t('common.fields.createdAt') }}
+            </th>
+            <td mat-cell *matCellDef="let user" class="numeric-cell">
+              {{ user.createdAt | date: 'yyyy-MM-dd HH:mm' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="deletedAt">
+            <th mat-header-cell *matHeaderCellDef>{{ t('common.fields.deletedAt') }}</th>
+            <td mat-cell *matCellDef="let user" class="numeric-cell">
+              {{ user.deletedAt | date: 'yyyy-MM-dd HH:mm' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="deletedBy">
+            <th mat-header-cell *matHeaderCellDef>{{ t('common.fields.deletedBy') }}</th>
+            <td mat-cell *matCellDef="let user"><bdi>{{ user.deletedBy }}</bdi></td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="actions-cell">
+              {{ t('common.fields.actions') }}
+            </th>
+            <td mat-cell *matCellDef="let user" class="actions-cell">
+              <ng-container *appHasRole="adminRole">
+                @if (user.isDeleted) {
+                  <button
+                    matIconButton
+                    type="button"
+                    [matTooltip]="t('common.actions.restore')"
+                    [attr.aria-label]="t('common.actions.restore') + ' ' + user.username"
+                    (click)="confirmRestore(user)"
+                  >
+                    <mat-icon>restore_from_trash</mat-icon>
+                  </button>
+                } @else {
+                  <a
+                    matIconButton
+                    [routerLink]="['/users', user.id, 'edit']"
+                    [matTooltip]="t('common.actions.edit')"
+                    [attr.aria-label]="t('common.actions.edit') + ' ' + user.username"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </a>
+
+                  <button
+                    matIconButton
+                    type="button"
+                    [matTooltip]="t('common.actions.delete')"
+                    [attr.aria-label]="t('common.actions.delete') + ' ' + user.username"
+                    (click)="confirmDelete(user)"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </ng-container>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns()"></tr>
+        </table>
+      </div>
+
+      <mat-paginator
+        [length]="result.totalCount"
+        [pageSize]="result.pageSize"
+        [pageIndex]="result.pageNumber - 1"
+        [pageSizeOptions]="[10, 25, 50, 100]"
+        showFirstLastButtons
+        (page)="onPageChange($event)"
+      />
+    }
+  }
+</ng-container>

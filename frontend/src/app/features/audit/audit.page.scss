@@ -1,0 +1,85 @@
+.page-header {
+  margin-block-end: 1rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+}
+
+.page-subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.filters-card {
+  margin-block-end: 1rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  border-radius: 8px;
+  background: var(--mat-sys-surface);
+}
+
+table {
+  width: 100%;
+  min-width: 900px;
+}
+
+.cell-secondary {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.numeric-cell {
+  text-align: end;
+  white-space: nowrap;
+}
+
+.diff-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+  }
+}
+
+.diff-field {
+  font-weight: 600;
+  min-width: 8rem;
+}
+
+.diff-from {
+  color: var(--mat-sys-on-surface-variant);
+  text-decoration: line-through;
+}
+
+/*
+  The arrow is directional, so it mirrors in right-to-left layouts. Non-directional icons - delete, edit -
+  deliberately do not.
+*/
+.diff-arrow {
+  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
+}
+
+:host-context([dir='rtl']) .diff-arrow {
+  transform: scaleX(-1);
+}
+
+.diff-to {
+  font-weight: 600;
+}

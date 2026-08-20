@@ -1,0 +1,80 @@
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-end: 1rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+}
+
+.page-subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.filters-card {
+  margin-block-end: 1rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.filters-search {
+  flex: 2 1 260px;
+}
+
+.filters-role {
+  flex: 1 1 180px;
+}
+
+/* Wide content scrolls inside its own container: the page body must never scroll sideways. */
+.table-scroll {
+  overflow-x: auto;
+  border-radius: 8px;
+  background: var(--mat-sys-surface);
+}
+
+table {
+  width: 100%;
+  min-width: 720px;
+}
+
+.cell-secondary {
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+/*
+  Numbers and timestamps align to the end of the cell in both directions, so a column of dates stays readable
+  when the layout flips to right-to-left.
+*/
+.numeric-cell {
+  text-align: end;
+  white-space: nowrap;
+}
+
+.actions-cell {
+  text-align: end;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

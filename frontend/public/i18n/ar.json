@@ -1,0 +1,185 @@
+{
+  "app": {
+    "title": "إدارة المستخدمين",
+    "signedInAs": "مسجّل الدخول باسم {{name}}"
+  },
+  "common": {
+    "actions": {
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "create": "إضافة",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "restore": "استعادة",
+      "search": "بحث",
+      "clear": "مسح",
+      "retry": "إعادة المحاولة",
+      "dismiss": "إغلاق",
+      "signIn": "تسجيل الدخول",
+      "signOut": "تسجيل الخروج",
+      "changePassword": "تغيير كلمة المرور",
+      "close": "إغلاق"
+    },
+    "states": {
+      "loading": "جارٍ التحميل…",
+      "emptyTitle": "لا توجد بيانات",
+      "emptyMessage": "لا توجد سجلات مطابقة للفلاتر الحالية.",
+      "errorTitle": "حدث خطأ",
+      "saving": "جارٍ الحفظ…"
+    },
+    "fields": {
+      "username": "اسم المستخدم",
+      "email": "البريد الإلكتروني",
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "password": "كلمة المرور",
+      "currentPassword": "كلمة المرور الحالية",
+      "newPassword": "كلمة المرور الجديدة",
+      "role": "الصلاحية",
+      "createdAt": "تاريخ الإنشاء",
+      "lastModifiedAt": "آخر تعديل",
+      "lastLoginAt": "آخر دخول",
+      "deletedAt": "تاريخ الحذف",
+      "deletedBy": "حُذف بواسطة",
+      "actions": "الإجراءات",
+      "status": "الحالة"
+    },
+    "language": {
+      "switchToArabic": "العربية",
+      "switchToEnglish": "English",
+      "label": "اللغة"
+    },
+    "never": "لا يوجد",
+    "yes": "نعم",
+    "no": "لا"
+  },
+  "roles": {
+    "Admin": "مدير النظام",
+    "User": "مستخدم",
+    "ReadOnlyUser": "مستخدم للقراءة فقط",
+    "all": "كل الصلاحيات"
+  },
+  "auth": {
+    "login": {
+      "title": "تسجيل الدخول",
+      "subtitle": "استخدم حسابك للمتابعة",
+      "submit": "تسجيل الدخول",
+      "signingIn": "جارٍ تسجيل الدخول…"
+    }
+  },
+  "users": {
+    "list": {
+      "title": "المستخدمون",
+      "subtitle": "{{count}} مستخدم",
+      "searchPlaceholder": "ابحث بالاسم أو اسم المستخدم أو البريد الإلكتروني",
+      "showDeleted": "إظهار المستخدمين المحذوفين",
+      "createButton": "إضافة مستخدم",
+      "lockedOut": "مقفل",
+      "active": "نشط",
+      "deleted": "محذوف",
+      "emptyTitle": "لا يوجد مستخدمون",
+      "emptyMessage": "جرّب كلمة بحث أخرى أو أزل فلتر الصلاحية.",
+      "confirmDelete": {
+        "title": "حذف المستخدم؟",
+        "message": "سيتم حذف {{username}} حذفاً منطقياً. يبقى سجله محفوظاً ويمكن لمدير النظام استعادته.",
+        "confirm": "حذف"
+      },
+      "confirmRestore": {
+        "title": "استعادة المستخدم؟",
+        "message": "سيتمكن {{username}} من تسجيل الدخول مرة أخرى.",
+        "confirm": "استعادة"
+      },
+      "deleted_success": "تم حذف المستخدم.",
+      "restored_success": "تم استعادة المستخدم."
+    },
+    "form": {
+      "createTitle": "إضافة مستخدم",
+      "editTitle": "تعديل المستخدم",
+      "createdSuccess": "تم إنشاء المستخدم.",
+      "updatedSuccess": "تم تحديث المستخدم.",
+      "usernameHint": "حروف وأرقام ونقطة وشرطة سفلية وشرطة. لا يمكن تغييره لاحقاً.",
+      "passwordHint": "12 حرفاً على الأقل، مع حرف كبير وحرف صغير ورقم.",
+      "usernameTaken": "اسم المستخدم مستخدم بالفعل.",
+      "emailTaken": "البريد الإلكتروني مستخدم بالفعل.",
+      "checking": "جارٍ التحقق…"
+    },
+    "validation": {
+      "required": "هذا الحقل مطلوب.",
+      "email": "أدخل بريداً إلكترونياً صحيحاً.",
+      "minlength": "يجب أن يكون {{requiredLength}} حرفاً على الأقل.",
+      "maxlength": "يجب ألا يزيد عن {{requiredLength}} حرفاً.",
+      "pattern": "يحتوي على حروف غير مسموح بها.",
+      "passwordPolicy": "12 حرفاً على الأقل، مع حرف كبير وحرف صغير ورقم.",
+      "passwordsMustDiffer": "يجب أن تختلف كلمة المرور الجديدة عن الحالية.",
+      "taken": "مستخدم بالفعل."
+    }
+  },
+  "profile": {
+    "title": "ملفي الشخصي",
+    "subtitle": "حدّث بياناتك الخاصة",
+    "updatedSuccess": "تم تحديث الملف الشخصي.",
+    "passwordChanged": "تم تغيير كلمة المرور، وتم إنهاء الجلسات الأخرى.",
+    "roleReadOnly": "يحدد مدير النظام صلاحيتك ولا يمكن تغييرها من هنا.",
+    "changePasswordTitle": "تغيير كلمة المرور"
+  },
+  "audit": {
+    "title": "سجل التدقيق",
+    "subtitle": "كل تغيير على المستخدمين، الأحدث أولاً",
+    "columns": {
+      "timestamp": "التاريخ والوقت",
+      "action": "الإجراء",
+      "target": "العنصر",
+      "actor": "نُفّذ بواسطة",
+      "ipAddress": "عنوان IP",
+      "changes": "التغييرات"
+    },
+    "actions": {
+      "Insert": "إنشاء",
+      "Update": "تحديث",
+      "Delete": "حذف",
+      "Restore": "استعادة",
+      "RoleChange": "تغيير الصلاحية"
+    },
+    "filters": {
+      "action": "الإجراء",
+      "allActions": "كل الإجراءات"
+    },
+    "redacted": "محجوب",
+    "noChanges": "لا توجد تفاصيل على مستوى الحقول.",
+    "emptyTitle": "لا توجد سجلات تدقيق",
+    "emptyMessage": "لم يُسجّل أي شيء للفلاتر الحالية."
+  },
+  "nav": {
+    "users": "المستخدمون",
+    "profile": "الملف الشخصي",
+    "audit": "سجل التدقيق",
+    "menu": "القائمة"
+  },
+  "forbidden": {
+    "title": "غير مسموح",
+    "message": "صلاحيتك لا تسمح بالوصول إلى هذه الصفحة.",
+    "back": "العودة إلى المستخدمين"
+  },
+  "errors": {
+    "unknown": "حدث خطأ. يرجى المحاولة مرة أخرى.",
+    "VALIDATION_ERROR": "يرجى تصحيح الحقول المحددة.",
+    "INVALID_SORT_FIELD": "لا يمكن الترتيب حسب هذا العمود.",
+    "INVALID_CREDENTIALS": "اسم المستخدم أو كلمة المرور غير صحيحة.",
+    "ACCOUNT_LOCKED": "عدد المحاولات الفاشلة كبير. حاول بعد حوالي {{retryAfterMinutes}} دقيقة.",
+    "UNAUTHENTICATED": "انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.",
+    "FORBIDDEN": "صلاحيتك لا تسمح بهذا الإجراء.",
+    "CANNOT_DELETE_SELF": "لا يمكنك حذف حسابك الخاص.",
+    "RESOURCE_NOT_FOUND": "هذا السجل لم يعد موجوداً.",
+    "RESOURCE_CONFLICT": "يتعارض هذا مع الحالة الحالية.",
+    "RESOURCE_MODIFIED": "قام مستخدم آخر بتعديل هذا السجل. أعد التحميل ثم طبّق تعديلاتك.",
+    "USERNAME_ALREADY_EXISTS": "اسم المستخدم مستخدم بالفعل.",
+    "EMAIL_ALREADY_EXISTS": "البريد الإلكتروني مستخدم بالفعل.",
+    "USER_ALREADY_DELETED": "هذا المستخدم محذوف بالفعل.",
+    "USER_NOT_DELETED": "يمكن استعادة المستخدمين المحذوفين فقط.",
+    "LAST_ADMIN_CANNOT_BE_REMOVED": "يجب أن يبقى في النظام مدير واحد على الأقل.",
+    "CANNOT_CHANGE_OWN_ROLE": "لا يمكنك تغيير صلاحيتك الخاصة.",
+    "RATE_LIMITED": "عدد الطلبات كبير. يرجى الانتظار قليلاً.",
+    "NETWORK_UNAVAILABLE": "لا يمكن الوصول إلى الخادم.",
+    "INTERNAL_ERROR": "حدث خطأ في الخادم. يرجى المحاولة مرة أخرى."
+  }
+}

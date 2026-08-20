@@ -1,0 +1,143 @@
+<ng-container *transloco="let t">
+  <header class="page-header">
+    <h1>{{ t('profile.title') }}</h1>
+    <p class="page-subtitle">{{ t('profile.subtitle') }}</p>
+  </header>
+
+  @if (loading()) {
+    <app-loading-state />
+  } @else if (profile(); as me) {
+    <div class="profile-grid">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>{{ t('profile.title') }}</mat-card-title>
+        </mat-card-header>
+
+        @if (savingProfile()) {
+          <mat-progress-bar mode="indeterminate" [attr.aria-label]="t('common.states.saving')" />
+        }
+
+        <mat-card-content>
+          @if (conflict(); as message) {
+            <p class="form-conflict" role="alert">{{ message }}</p>
+          }
+
+          <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
+            <!--
+              Read-only, and deliberately so: the username is immutable server-side, and the role is not part
+              of the profile contract at all - which is what makes self-elevation impossible rather than merely
+              hidden.
+            -->
+            <div class="readonly-fields">
+              <div>
+                <span class="readonly-label">{{ t('common.fields.username') }}</span>
+                <span class="readonly-value"><bdi>{{ me.username }}</bdi></span>
+              </div>
+
+              <div>
+                <span class="readonly-label">{{ t('common.fields.role') }}</span>
+                <span class="readonly-value">{{ t('roles.' + me.role) }}</span>
+              </div>
+            </div>
+
+            <p class="readonly-note">{{ t('profile.roleReadOnly') }}</p>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>{{ t('common.fields.firstName') }}</mat-label>
+                <input matInput formControlName="firstName" dir="auto" required />
+                @if (profileForm.controls.firstName.hasError('required')) {
+                  <mat-error>{{ t('users.validation.required') }}</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>{{ t('common.fields.lastName') }}</mat-label>
+                <input matInput formControlName="lastName" dir="auto" required />
+                @if (profileForm.controls.lastName.hasError('required')) {
+                  <mat-error>{{ t('users.validation.required') }}</mat-error>
+                }
+              </mat-form-field>
+            </div>
+
+            <mat-form-field appearance="outline">
+              <mat-label>{{ t('common.fields.email') }}</mat-label>
+              <input matInput formControlName="email" type="email" dir="auto" required />
+              @if (profileForm.controls.email.hasError('required')) {
+                <mat-error>{{ t('users.validation.required') }}</mat-error>
+              } @else if (profileForm.controls.email.hasError('email')) {
+                <mat-error>{{ t('users.validation.email') }}</mat-error>
+              } @else if (profileForm.controls.email.hasError('taken')) {
+                <mat-error>{{ t('users.form.emailTaken') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <div class="form-actions">
+              <button matButton="filled" type="submit" [disabled]="savingProfile()">
+                {{ t('common.actions.save') }}
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>{{ t('profile.changePasswordTitle') }}</mat-card-title>
+        </mat-card-header>
+
+        @if (savingPassword()) {
+          <mat-progress-bar mode="indeterminate" [attr.aria-label]="t('common.states.saving')" />
+        }
+
+        <mat-card-content>
+          <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
+            <mat-form-field appearance="outline">
+              <mat-label>{{ t('common.fields.currentPassword') }}</mat-label>
+              <input
+                matInput
+                formControlName="currentPassword"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+              @if (passwordForm.controls.currentPassword.hasError('required')) {
+                <mat-error>{{ t('users.validation.required') }}</mat-error>
+              } @else if (passwordForm.controls.currentPassword.hasError('wrong')) {
+                <mat-error>{{ t('errors.INVALID_CREDENTIALS') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>{{ t('common.fields.newPassword') }}</mat-label>
+              <input
+                matInput
+                formControlName="newPassword"
+                type="password"
+                autocomplete="new-password"
+                required
+              />
+              <mat-hint>{{ t('users.form.passwordHint') }}</mat-hint>
+
+              @if (passwordForm.controls.newPassword.hasError('required')) {
+                <mat-error>{{ t('users.validation.required') }}</mat-error>
+              } @else if (passwordForm.controls.newPassword.hasError('pattern')) {
+                <mat-error>{{ t('users.validation.passwordPolicy') }}</mat-error>
+              } @else if (passwordForm.controls.newPassword.hasError('mustDiffer')) {
+                <mat-error>{{ t('users.validation.passwordsMustDiffer') }}</mat-error>
+              } @else if (passwordForm.controls.newPassword.hasError('server')) {
+                <mat-error>{{ passwordForm.controls.newPassword.getError('server') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <div class="form-actions">
+              <button matButton="filled" type="submit" [disabled]="savingPassword()">
+                {{ t('common.actions.changePassword') }}
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  }
+</ng-container>

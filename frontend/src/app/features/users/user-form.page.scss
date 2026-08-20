@@ -1,0 +1,42 @@
+.page-header h1 {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 640px;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+
+  mat-form-field {
+    flex: 1 1 0;
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-block-start: 1rem;
+}
+
+.form-conflict {
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border-radius: 4px;
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+
+@media (max-width: 767px) {
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+}

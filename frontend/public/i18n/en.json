@@ -1,0 +1,185 @@
+{
+  "app": {
+    "title": "User Management",
+    "signedInAs": "Signed in as {{name}}"
+  },
+  "common": {
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "create": "Create",
+      "edit": "Edit",
+      "delete": "Delete",
+      "restore": "Restore",
+      "search": "Search",
+      "clear": "Clear",
+      "retry": "Retry",
+      "dismiss": "Dismiss",
+      "signIn": "Sign in",
+      "signOut": "Sign out",
+      "changePassword": "Change password",
+      "close": "Close"
+    },
+    "states": {
+      "loading": "Loading…",
+      "emptyTitle": "Nothing to show",
+      "emptyMessage": "No records match the current filters.",
+      "errorTitle": "Something went wrong",
+      "saving": "Saving…"
+    },
+    "fields": {
+      "username": "Username",
+      "email": "Email",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "password": "Password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "role": "Role",
+      "createdAt": "Created",
+      "lastModifiedAt": "Last modified",
+      "lastLoginAt": "Last sign-in",
+      "deletedAt": "Deleted",
+      "deletedBy": "Deleted by",
+      "actions": "Actions",
+      "status": "Status"
+    },
+    "language": {
+      "switchToArabic": "العربية",
+      "switchToEnglish": "English",
+      "label": "Language"
+    },
+    "never": "Never",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "roles": {
+    "Admin": "Administrator",
+    "User": "User",
+    "ReadOnlyUser": "Read-only user",
+    "all": "All roles"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Use your account to continue",
+      "submit": "Sign in",
+      "signingIn": "Signing in…"
+    }
+  },
+  "users": {
+    "list": {
+      "title": "Users",
+      "subtitle": "{{count}} users",
+      "searchPlaceholder": "Search by name, username or email",
+      "showDeleted": "Show deleted users",
+      "createButton": "Create user",
+      "lockedOut": "Locked",
+      "active": "Active",
+      "deleted": "Deleted",
+      "emptyTitle": "No users found",
+      "emptyMessage": "Try a different search term or clear the role filter.",
+      "confirmDelete": {
+        "title": "Delete user?",
+        "message": "{{username}} will be soft-deleted. Their history is kept and an administrator can restore them.",
+        "confirm": "Delete"
+      },
+      "confirmRestore": {
+        "title": "Restore user?",
+        "message": "{{username}} will be able to sign in again.",
+        "confirm": "Restore"
+      },
+      "deleted_success": "User deleted.",
+      "restored_success": "User restored."
+    },
+    "form": {
+      "createTitle": "Create user",
+      "editTitle": "Edit user",
+      "createdSuccess": "User created.",
+      "updatedSuccess": "User updated.",
+      "usernameHint": "Letters, digits, dots, underscores and hyphens. Cannot be changed later.",
+      "passwordHint": "At least 12 characters, with an uppercase letter, a lowercase letter and a digit.",
+      "usernameTaken": "This username is already taken.",
+      "emailTaken": "This email is already taken.",
+      "checking": "Checking…"
+    },
+    "validation": {
+      "required": "This field is required.",
+      "email": "Enter a valid email address.",
+      "minlength": "Must be at least {{requiredLength}} characters.",
+      "maxlength": "Must be at most {{requiredLength}} characters.",
+      "pattern": "Contains characters that are not allowed.",
+      "passwordPolicy": "At least 12 characters, with an uppercase letter, a lowercase letter and a digit.",
+      "passwordsMustDiffer": "The new password must be different from the current one.",
+      "taken": "Already taken."
+    }
+  },
+  "profile": {
+    "title": "My profile",
+    "subtitle": "Update your own details",
+    "updatedSuccess": "Profile updated.",
+    "passwordChanged": "Password changed. Other sessions have been signed out.",
+    "roleReadOnly": "Your role is set by an administrator and cannot be changed here.",
+    "changePasswordTitle": "Change password"
+  },
+  "audit": {
+    "title": "Audit trail",
+    "subtitle": "Every change to a user, newest first",
+    "columns": {
+      "timestamp": "When",
+      "action": "Action",
+      "target": "Target",
+      "actor": "Performed by",
+      "ipAddress": "IP address",
+      "changes": "Changes"
+    },
+    "actions": {
+      "Insert": "Created",
+      "Update": "Updated",
+      "Delete": "Deleted",
+      "Restore": "Restored",
+      "RoleChange": "Role changed"
+    },
+    "filters": {
+      "action": "Action",
+      "allActions": "All actions"
+    },
+    "redacted": "redacted",
+    "noChanges": "No field-level detail recorded.",
+    "emptyTitle": "No audit entries",
+    "emptyMessage": "Nothing has been recorded for the current filters."
+  },
+  "nav": {
+    "users": "Users",
+    "profile": "Profile",
+    "audit": "Audit",
+    "menu": "Menu"
+  },
+  "forbidden": {
+    "title": "Not permitted",
+    "message": "Your role does not allow access to this page.",
+    "back": "Back to users"
+  },
+  "errors": {
+    "unknown": "Something went wrong. Please try again.",
+    "VALIDATION_ERROR": "Please correct the highlighted fields.",
+    "INVALID_SORT_FIELD": "That column cannot be sorted.",
+    "INVALID_CREDENTIALS": "The username or password is incorrect.",
+    "ACCOUNT_LOCKED": "Too many failed attempts. Try again in about {{retryAfterMinutes}} minute(s).",
+    "UNAUTHENTICATED": "Your session has ended. Please sign in again.",
+    "FORBIDDEN": "Your role does not allow this action.",
+    "CANNOT_DELETE_SELF": "You cannot delete your own account.",
+    "RESOURCE_NOT_FOUND": "That record no longer exists.",
+    "RESOURCE_CONFLICT": "That conflicts with the current state.",
+    "RESOURCE_MODIFIED": "Someone else changed this record. Reload and apply your changes again.",
+    "USERNAME_ALREADY_EXISTS": "That username is already taken.",
+    "EMAIL_ALREADY_EXISTS": "That email address is already taken.",
+    "USER_ALREADY_DELETED": "That user is already deleted.",
+    "USER_NOT_DELETED": "Only a deleted user can be restored.",
+    "LAST_ADMIN_CANNOT_BE_REMOVED": "The system must keep at least one administrator.",
+    "CANNOT_CHANGE_OWN_ROLE": "You cannot change your own role.",
+    "RATE_LIMITED": "Too many requests. Please wait a moment.",
+    "NETWORK_UNAVAILABLE": "The server could not be reached.",
+    "INTERNAL_ERROR": "Something went wrong on the server. Please try again."
+  }
+}

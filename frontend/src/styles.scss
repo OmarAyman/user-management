@@ -1,0 +1,51 @@
+@use '@angular/material' as mat;
+
+/*
+  One theme, generated from Material's system tokens, with light and dark both defined. `color-scheme: light
+  dark` lets the browser pick, so the app follows the operating system rather than forcing a look.
+*/
+html {
+  color-scheme: light dark;
+
+  @include mat.theme(
+    (
+      color: mat.$azure-palette,
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
+  font-family: var(--mat-sys-body-medium-font, Roboto, 'Helvetica Neue', sans-serif);
+
+  /*
+    Nothing in the application sets `left` or `right`: layout uses logical properties throughout, so the whole
+    interface mirrors from the `dir` attribute alone.
+  */
+}
+
+/* Snack bar variants, so a success and a failure are distinguishable without reading. */
+.app-snack-success {
+  --mat-snack-bar-container-color: var(--mat-sys-tertiary-container);
+  --mat-snack-bar-supporting-text-color: var(--mat-sys-on-tertiary-container);
+}
+
+.app-snack-error {
+  --mat-snack-bar-container-color: var(--mat-sys-error-container);
+  --mat-snack-bar-supporting-text-color: var(--mat-sys-on-error-container);
+}
+
+/* A visible focus ring everywhere: keyboard users need to see where they are. */
+:focus-visible {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: 2px;
+}

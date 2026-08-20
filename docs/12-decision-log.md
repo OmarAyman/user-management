@@ -481,6 +481,66 @@ database-generated key would have to be handled after the save instead.
 
 ---
 
+## ADR-0019 — Field validation lives at the transport boundary, business rules in the handlers
+
+**Status:** accepted (Phase 3, correcting the Phase 1 design)
+
+**Context:** Phase 1 placed FluentValidation validators in `Application/Features/<UseCase>/`, alongside the
+command they validate, and ran them from an MVC action filter.
+
+**Why that could not work.** The filter validates the object MVC bound — the API *request record* the client
+posted — and resolves `IValidator<T>` for that type. A validator written against the internal command is
+never resolved, so it never runs. The result is worse than no validation: the code reads as though inputs are
+checked, the tests pass because handlers reject bad data anyway, and the gap is invisible until someone posts
+a 400-character username.
+
+**Decision:** validators live in `Api/Validation`, written against the request records, and the division of
+labour is explicit:
+
+| Concern | Where | Why there |
+|---|---|---|
+| Field shape — required, length, format, password composition | `Api/Validation` | It is a property of the payload, and the payload is an HTTP concern |
+| Semantics — uniqueness, last administrator, own-role, restore availability | Application handlers | They are rules about the system's state, and no caller may bypass them |
+
+FluentValidation was removed from the Application project as a consequence: it has no validators left.
+
+**Consequences:** a use case that needs to reject a value on business grounds throws, rather than relying on a
+validator that may or may not be wired. Handler-produced field errors carry a resource key so the boundary can
+localize them (see ADR-0011 and the localization plan). A second entry point — a worker, a message consumer —
+would need its own shape validation, which is correct: it would have its own payload.
+
+---
+
+## ADR-0020 — Queries are composed in the use case and executed through a port
+
+**Status:** accepted (Phase 4)
+
+**Context:** the user listing needs filtering, sorting, paging and projection, all pushed into SQL. The
+obvious implementations both break something: composing the query inside a repository moves the business
+decisions (which fields are searchable, what the default sort is) into the persistence layer, while calling
+`ToListAsync` from a handler puts EF Core in the Application project — which an architecture test forbids, for
+the reason that rule exists at all.
+
+**Decision:** `IQueryExecutor` with four members (`ToListAsync`, `CountAsync`, `FirstOrDefaultAsync`,
+`AnyAsync`), implemented in Infrastructure over EF Core's async extensions. Composition —
+`Where`/`OrderBy`/`Select`/`Skip`/`Take` — is plain `System.Linq` and stays in the use case next to the rule it
+serves. Only execution crosses the boundary.
+
+**Alternatives:** repositories returning finished `PagedResult<T>` pages (hides the query shape from the code
+that owns it, and multiplies methods as filters grow); referencing EF Core from Application (deletes the
+boundary the architecture test protects); synchronous execution (unacceptable on a web request path).
+
+**Consequences:** one small port and one small adapter. A handler unit test can still stub the executor, and
+the SQL a listing produces is readable from the handler rather than assembled across two files.
+
+**A defect this design surfaced:** sorting was originally applied to the projected DTO. EF Core cannot
+translate `OrderBy` over a constructor-projected record — it attempts to build the DTO inside the `ORDER BY`
+clause and throws at runtime. Sorting now happens on the entity before projection, which also keeps the
+`ORDER BY` on indexed columns. The failure was only visible through a real database, which is precisely why
+the integration tests do not use an in-memory provider.
+
+---
+
 ## Rejected outright
 
 | Idea | Why not |
