@@ -57,6 +57,10 @@ public sealed class ApplicationExceptionHandler(
             validation.Errors,
             messages.GetTitle(ErrorCodes.ValidationError)),
 
+        // Not a per-field validation failure, so it carries its own code rather than VALIDATION_ERROR: an
+        // unknown sort field is a contract violation, not a message a form renders next to an input.
+        BadRequestException badRequest => Build(context, StatusCodes.Status400BadRequest, badRequest.ErrorCode),
+
         AuthenticationFailedException auth => BuildAuthentication(context, auth),
 
         NotFoundException notFound => Build(context, StatusCodes.Status404NotFound, notFound.ErrorCode),
