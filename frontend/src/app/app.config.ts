@@ -5,12 +5,13 @@ import {
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
-import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
+import { provideRouter, TitleStrategy, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { provideTransloco } from '@jsverse/transloco';
 
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
 import { TranslocoHttpLoader } from './core/i18n/transloco-loader';
+import { TranslatedTitleStrategy } from './core/i18n/translated-title.strategy';
 import { acceptLanguageInterceptor } from './core/interceptors/accept-language.interceptor';
 import { authRefreshInterceptor } from './core/interceptors/auth-refresh.interceptor';
 import { authTokenInterceptor } from './core/interceptors/auth-token.interceptor';
@@ -29,6 +30,10 @@ export const appConfig: ApplicationConfig = {
       withComponentInputBinding(),
       withInMemoryScrolling({ scrollPositionRestoration: 'top' }),
     ),
+
+    // Route titles are translation keys, not text: the tab title is user-visible, so it follows the same
+    // localization rule as everything inside a template.
+    { provide: TitleStrategy, useClass: TranslatedTitleStrategy },
 
     // Interceptor order is behaviour, and the two halves of the exchange run in opposite directions:
     // requests pass through this array top to bottom, responses come back bottom to top.

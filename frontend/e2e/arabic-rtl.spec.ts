@@ -50,6 +50,23 @@ test.describe('Arabic and right-to-left', () => {
     expect(problem).toContain('INVALID_CREDENTIALS');
   });
 
+  test('the browser tab title is translated, and follows a language switch', async ({ page }) => {
+    await signIn(page, 'admin');
+
+    // The tab title is user-visible text that lives outside every template, which is how it stayed English
+    // through the whole localization pass. It now comes from a route translation key.
+    await expect(page).toHaveTitle('Users');
+
+    await page.getByRole('button', { name: 'Language' }).click();
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+
+    // No navigation happened, so this only holds because the title strategy re-applies on a language change.
+    await expect(page).toHaveTitle(/[؀-ۿ]/);
+
+    await page.getByRole('link', { name: 'الملف الشخصي' }).click();
+    await expect(page).toHaveTitle(/[؀-ۿ]/);
+  });
+
   test('the interface is usable at a phone width', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await signIn(page, 'admin');

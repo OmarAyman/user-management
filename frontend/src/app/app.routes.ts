@@ -6,12 +6,16 @@ import { RoleName } from './core/models/api.models';
 /**
  * Feature areas are lazy-loaded: a read-only user never downloads the audit screen, and the sign-in page does
  * not carry the rest of the application with it.
+ *
+ * `title` carries a **translation key**, not text. `TranslatedTitleStrategy` resolves it, so the browser tab
+ * follows the same localization rule as every string inside a template; the keys are the ones the pages
+ * already use for their headings, so a title cannot drift from the page it names.
  */
 export const routes: Routes = [
   {
     path: 'login',
     loadComponent: () => import('./features/auth/login.page').then((m) => m.LoginPage),
-    title: 'Sign in',
+    title: 'auth.login.title',
   },
   {
     path: '',
@@ -26,7 +30,7 @@ export const routes: Routes = [
       {
         path: 'profile',
         loadComponent: () => import('./features/profile/profile.page').then((m) => m.ProfilePage),
-        title: 'My profile',
+        title: 'profile.title',
       },
       {
         path: 'audit',
@@ -34,12 +38,12 @@ export const routes: Routes = [
         // proves a non-Admin gets 403 from the API even though this guard would have stopped them first.
         canActivate: [roleGuard(RoleName.admin)],
         loadComponent: () => import('./features/audit/audit.page').then((m) => m.AuditPage),
-        title: 'Audit trail',
+        title: 'audit.title',
       },
       {
         path: 'forbidden',
         loadComponent: () => import('./features/errors/forbidden.page').then((m) => m.ForbiddenPage),
-        title: 'Not permitted',
+        title: 'forbidden.title',
       },
     ],
   },
