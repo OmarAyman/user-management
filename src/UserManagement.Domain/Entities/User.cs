@@ -136,12 +136,27 @@ public sealed class User : IAuditableEntity, ISoftDeletable
         Email = email.Trim();
     }
 
+    /// <summary>
+    /// Sets a new password. Rotates the security stamp, which is what revokes outstanding refresh tokens.
+    /// </summary>
     public void SetPasswordHash(string passwordHash)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);
 
         PasswordHash = passwordHash;
         SecurityStamp = Guid.NewGuid();
+    }
+
+    /// <summary>
+    /// Re-stores the same password under stronger hashing parameters. Deliberately does <b>not</b> rotate the
+    /// security stamp: the credential has not changed, so signing the user out of their other sessions because
+    /// the iteration count moved would be a bug, not a security measure.
+    /// </summary>
+    public void UpgradePasswordHash(string passwordHash)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);
+
+        PasswordHash = passwordHash;
     }
 
     /// <summary>Soft-deletes the user (BR-07: deleting an already-deleted user is a conflict).</summary>

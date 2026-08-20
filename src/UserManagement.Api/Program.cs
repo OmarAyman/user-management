@@ -6,6 +6,11 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
+using FluentValidation;
+using UserManagement.Api.ErrorHandling;
+using UserManagement.Api.Filters;
+using UserManagement.Api.RateLimiting;
+using UserManagement.Application.Common.Options;
 using UserManagement.Api.Configuration;
 using UserManagement.Api.Middleware;
 using UserManagement.Api.Services;
@@ -47,10 +52,34 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IClientInfoProvider, ClientInfoProvider>();
+builder.Services.AddScoped<RefreshTokenCookieWriter>();
 
 builder.Services.Configure<CorsOptions>(builder.Configuration.GetSection(CorsOptions.SectionName));
 
-builder.Services.AddControllers()
+// Security policy that use cases enforce, validated at startup like every other option set.
+builder.Services.AddOptions<LockoutOptions>()
+    .Bind(builder.Configuration.GetSection(LockoutOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<PasswordPolicyOptions>()
+    .Bind(builder.Configuration.GetSection(PasswordPolicyOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+// Shape validation lives at the transport boundary, because the filter validates the request record the
+// client actually posted. Business rules stay in the handlers, where no caller can bypass them.
+builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly, includeInternalTypes: true);
+
+// Ordered chain: expected failures first, then the catch-all that discloses nothing.
+builder.Services.AddSingleton<IErrorMessageProvider, EnglishErrorMessageProvider>();
+builder.Services.AddExceptionHandler<ApplicationExceptionHandler>();
+builder.Services.AddExceptionHandler<UnhandledExceptionHandler>();
+builder.Services.AddProblemDetails();
+
+builder.Services.AddApplicationRateLimiting(builder.Configuration);
+
+builder.Services.AddControllers(options => options.Filters.Add<ValidationFilter>())
     .AddJsonOptions(options =>
     {
         // A payload carrying a field the model does not have is rejected rather than silently ignored. Silent
@@ -110,6 +139,10 @@ var app = builder.Build();
 
 app.UseSerilogRequestLogging();
 app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
+// Wraps everything downstream, so a failure anywhere below becomes a ProblemDetails rather than a stack trace.
+app.UseExceptionHandler();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -126,6 +159,7 @@ app.UseCors(CorsOptions.PolicyName);
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 
