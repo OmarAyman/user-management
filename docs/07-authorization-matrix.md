@@ -86,8 +86,8 @@ an authorization question. The design keeps it one:
 | Rule | Mechanism |
 |---|---|
 | Deleted rows are invisible by default | EF Core global query filter on `User` |
-| `IgnoreQueryFilters()` exists in exactly one place | `UserRepository.QueryIncludingDeleted()`; an architecture test fails the build if the call appears anywhere else |
-| Only two callers may use it | `GetDeletedUsersQueryHandler` (Admin policy) and `LoginCommandHandler` (must see a deleted row to refuse it, BR-05) |
+| `IgnoreQueryFilters()` exists in exactly one place | one private helper in `UserRepository`; an architecture test scans the source tree and fails the build if the call appears in any other file |
+| Only three methods expose it, each with a justified consumer | `QueryIncludingDeleted()` for the Admin-only listing, `GetByIdIncludingDeletedAsync()` for Admin load/restore, `GetForAuthenticationAsync()` for sign-in (which must see a deleted row to refuse it, BR-05) |
 | No client input selects it | `GET /api/users` has no `includeDeleted` parameter; deleted users live behind `GET /api/users/deleted` with its own `[Authorize(Policy = Policies.ManageUsers)]` |
 | A non-Admin cannot reach it at all | Route-level policy, verified for both `User` and `ReadOnlyUser` in the authorization matrix theory |
 

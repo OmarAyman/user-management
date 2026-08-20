@@ -140,13 +140,18 @@ It is a property of persistence, not of the caller.
 (`modelBuilder.Entity<User>().HasQueryFilter(u => !u.IsDeleted)`) excludes deleted rows from every query
 by default.
 
-Opting out is **an authorization decision, not a parameter**. `IUserRepository` exposes two
-intention-named methods — `QueryActive()` and `QueryIncludingDeleted()` — and the second is the only place
-in the codebase that calls `IgnoreQueryFilters()`, with an architecture test failing the build if the call
-appears anywhere else. It has exactly two callers: `GetDeletedUsersQueryHandler`, reached only through
-`GET /api/users/deleted` behind an Admin policy, and `LoginCommandHandler`, which must see a soft-deleted row
-in order to refuse it rather than report "no such user". `GET /api/users` has no soft-delete parameter at
-all, so there is nothing for a non-Admin to set (ADR-0004).
+Opting out is **an authorization decision, not a parameter**. `UserRepository` is the only type that calls
+`IgnoreQueryFilters()`, in a single private helper, and an architecture test scans the source tree to fail the
+build if the call appears in any other file. Three repository methods build on that helper, each with a
+justified consumer:
+
+| Method | Consumer | Why it needs deleted rows |
+|---|---|---|
+| `QueryIncludingDeleted()` | `GetDeletedUsersQueryHandler` behind `Policies.ManageUsers` | the Admin-only deleted listing |
+| `GetByIdIncludingDeletedAsync()` | Admin by-id lookup, restore, refresh-token owner resolution | an Admin must be able to load and restore a deleted user |
+| `GetForAuthenticationAsync()` | `LoginCommandHandler` | sign-in must see a deleted row to refuse it, rather than report "no such user" |
+
+`GET /api/users` has no soft-delete parameter at all, so there is nothing for a non-Admin to set (ADR-0004).
 
 Deletion sets `IsDeleted`, `DeletedAt` and `DeletedBy`. There is no hard-delete path on the API surface.
 `DELETE` against an already-deleted user returns `409 Conflict` rather than `404`, so an Admin can tell

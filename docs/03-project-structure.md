@@ -4,17 +4,19 @@
 
 ```text
 user-management/
-├── UserManagement.sln
+├── UserManagement.slnx             .NET 10 solution format (the SDK that builds net10.0 understands it)
 ├── Directory.Build.props           shared compiler settings: nullable, warnings-as-errors, analyzers
 ├── Directory.Packages.props        central package version management
+├── NuGet.config                    <clear /> + nuget.org only, so a clone does not depend on a private feed
 ├── .editorconfig                   formatting + analyzer severities
-├── .gitignore
+├── .gitattributes  .gitignore
 ├── README.md
 ├── docker-compose.yml              api + mssql (+ web)
 ├── database/
-│   ├── 001_schema.sql              DDL: tables, constraints, indexes
-│   ├── 002_seed.sql                roles + three demo users (precomputed hashes only)
-│   └── 003_sample_queries.sql      paging/search/sort/audit query examples with plans
+│   ├── 001_schema.sql              GENERATED from the migrations - never hand-edited
+│   ├── 002_seed.sql                three demo users (precomputed PBKDF2 hashes only, no plaintext)
+│   ├── 003_sample_queries.sql      the queries the app issues, each annotated with the index it uses
+│   └── generate-schema-script.ps1  regenerates 001_schema.sql and prepends the required SET options
 ├── docs/                           this design set, plus the demo script
 ├── postman/
 │   ├── UserManagement.postman_collection.json
@@ -117,16 +119,22 @@ Persistence/
   Interceptors/      AuditableEntitySaveChangesInterceptor, AuditSaveChangesInterceptor
   Repositories/      UserRepository       QueryActive() / QueryIncludingDeleted() - the single
                                           IgnoreQueryFilters() site (ADR-0004)
-                     RoleRepository, AuditLogRepository, RefreshTokenRepository, UnitOfWork
+                     RoleRepository, RefreshTokenRepository, AuditLogRepository (Phase 5)
+                     IUnitOfWork is implemented by ApplicationDbContext itself: a wrapper class would
+                     add a file and an indirection without adding a capability
   Migrations/        EF Core generated
   Seeding/           DbSeeder (roles + three demo users, idempotent)
 Security/
-  AspNetPasswordHasher.cs           wraps PasswordHasher<User>
-  AccessTokenIssuer.cs              JWT creation
-  RefreshTokenService.cs            256-bit random, SHA-256 at rest, rotation + revocation
+  AspNetPasswordHasher.cs           wraps PasswordHasher<User>, plus the dummy-hash timing defence
+  AccessTokenIssuer.cs              JWT creation (JsonWebTokenHandler)
+  JwtClaimNames.cs                  sub, username, role, jti - issued and read unmapped
+  OpaqueTokenGenerator.cs           256-bit random token + SHA-256 hex hashing
+  RefreshTokenService.cs            families, rotation, reuse detection, revocation
 Auditing/
-  AuditEntryBuilder.cs              change-tracker diff + redaction list
-Localization/
+  AuditPayloadBuilder.cs            EF-free: change list -> redacted JSON (unit-testable)
+Configuration/
+  JwtOptions.cs  RefreshTokenOptions.cs   bound + validated at startup
+Localization/                       (Phase 6)
   ResxMessageLocalizer.cs
   Resources/Messages.resx, Messages.ar.resx
 Time/
@@ -159,8 +167,11 @@ Services/
 Filters/
   ValidationFilter.cs               runs FluentValidation before the handler
 Configuration/
-  JwtOptions.cs  PasswordPolicyOptions.cs  LockoutOptions.cs  CorsOptions.cs
-  SwaggerConfiguration.cs  SerilogConfiguration.cs  LocalizationConfiguration.cs
+  JwtKeyGuard.cs                    refuses a placeholder/missing signing key outside Development;
+                                    generates an ephemeral one inside it, so nothing is ever committed
+  CorsOptions.cs                    explicit SPA origins (credentials are required by the refresh cookie)
+  PasswordPolicyOptions.cs  LockoutOptions.cs        (Phase 3-4)
+  SwaggerConfiguration.cs  LocalizationConfiguration.cs  (Phase 6, 9)
 appsettings.json
 appsettings.example.json            placeholders only, safe to commit
 Dockerfile
@@ -180,8 +191,13 @@ UserManagement.UnitTests/
   Auditing/         AuditEntryBuilderTests (redaction, exclusion, RoleChange row)
   Architecture/     LayerDependencyTests, QueryFilterOptOutTests
 UserManagement.IntegrationTests/
-  Infrastructure/   ApiTestFixture (WebApplicationFactory + Testcontainers MsSql),
-                    DatabaseResetter (Respawn), AuthenticatedClientFactory
+  TestSupport/      SqlServerFixture (real SQL Server via Testcontainers, schema built by the
+                    migrations; USERMANAGEMENT_TEST_SQL overrides it for a machine without Docker),
+                    TestCurrentUserService / TestClientInfoProvider, TestData
+                    (named TestSupport, not Infrastructure, so it cannot be confused with the
+                    UserManagement.Infrastructure namespace in a using directive)
+  Persistence/      SchemaTests, SoftDeleteTests, UniquenessTests, ConcurrencyTests, AuditTrailTests
+  Infrastructure/   ApiTestFixture (WebApplicationFactory), AuthenticatedClientFactory  (Phase 3+)
   Auth/             LoginEndpointTests, RefreshEndpointTests, TokenValidationTests
   Users/            UsersCrudTests, UsersListQueryTests, ProfileTests,
                     AuthorizationMatrixTests, SoftDeleteTests

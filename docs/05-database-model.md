@@ -18,7 +18,7 @@ Seeded: `(1, 'Admin')`, `(2, 'User')`, `(3, 'ReadOnlyUser')`.
 
 | Column | Type | Constraints / default |
 |---|---|---|
-| `Id` | `uniqueidentifier` | PK (non-clustered), `DEFAULT NEWSEQUENTIALID()` |
+| `Id` | `uniqueidentifier` | PK (non-clustered). Generated in code as a **version 7 GUID** (`Guid.CreateVersion7()`), which is time-ordered like `NEWSEQUENTIALID()` but known before the insert - so the audit interceptor can write its rows in the same transaction rather than after the save |
 | `Username` | `nvarchar(50)` | NOT NULL, `UQ_Users_ActiveUsername` (filtered) |
 | `Email` | `nvarchar(256)` | NOT NULL, `UQ_Users_ActiveEmail` (filtered) |
 | `FirstName` | `nvarchar(100)` | NOT NULL |
@@ -173,21 +173,32 @@ Client `sortBy` values map through a dictionary; anything else is a `400`, never
 ```bash
 dotnet ef migrations add InitialCreate -p src/UserManagement.Infrastructure -s src/UserManagement.Api
 dotnet ef database update -p src/UserManagement.Infrastructure -s src/UserManagement.Api
-dotnet ef migrations script -i -o database/001_schema.sql -p src/UserManagement.Infrastructure -s src/UserManagement.Api
+pwsh database/generate-schema-script.ps1
 ```
 
-`-i` produces an idempotent script, so a reviewer can run it against an existing database safely.
+`001_schema.sql` is **generated, never hand-written**, so it cannot drift from the migrations. The generator
+adds two things to the raw `dotnet ef migrations script --idempotent` output:
+
+- `-i` / `--idempotent`, so a reviewer can apply it to an existing database safely.
+- A `SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;` header. This is not cosmetic: SQL Server **refuses to
+  create a filtered index, or to insert into a table that has one, unless both options are ON**. SSMS sets
+  them by default and `sqlcmd` does not, so the raw EF output fails partway through for anyone running the
+  script from a command line. `002_seed.sql` and `003_sample_queries.sql` carry the same header for the same
+  reason. All three scripts were verified end to end against a freshly created database.
 
 ## 6. Seeding
 
-`DbSeeder` runs at startup in Development only and is idempotent (insert-if-absent by role id and by
-username). It inserts the three roles and three demo users. `002_seed.sql` performs the same inserts for
-reviewers who prefer SQL.
+**Roles are seeded by the migration**, not by the seeder: they are reference data, so `HasData` puts them in
+`001_schema.sql` and in every freshly created database without anyone having to remember a second step.
 
-Password hashes are **precomputed PBKDF2 values pasted as literals** — no plaintext appears in any script.
-A small `dotnet run --project tools/HashGenerator` style utility documented in the README regenerates them,
-so a reviewer can verify the hashes correspond to the documented demo passwords without the repository ever
-containing a password in a runnable statement.
+`DbSeeder` creates only the **demo users**, runs at startup in Development only, and is idempotent
+(insert-if-absent by username). Its passwords come from configuration (`Seed:*`); with none configured it
+creates nothing and logs why, so a deployed environment cannot acquire well-known accounts by accident.
+
+`002_seed.sql` performs the same three inserts for reviewers who prefer SQL. Its hashes are **precomputed
+PBKDF2 values pasted as literals**, produced by the application's own hasher — the same code path that
+verifies them at sign-in — so no plaintext password appears in any script. The passwords they correspond to
+are documented in the README as development-only.
 
 Demo accounts (credentials documented in the README, clearly marked as development-only):
 

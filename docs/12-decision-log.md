@@ -81,12 +81,14 @@ design exposed `GET /api/users?includeDeleted=true`, which made soft-delete visi
 through the controller rather than an *authorization decision*. A missing policy attribute would then have
 turned into a data leak. The revised design:
 
-- `IUserRepository` exposes two intention-named methods: `QueryActive()` (filtered, the default for
-  everything) and `QueryIncludingDeleted()` — the **only** place in the codebase that calls
-  `IgnoreQueryFilters()`, enforced by an architecture test that greps for the call.
-- `QueryIncludingDeleted()` has exactly two callers, both justified in code comments: the Admin-only
-  `GetDeletedUsersQueryHandler` behind `Policies.ManageUsers`, and `LoginCommandHandler`, which must see a
-  deleted row to refuse it (BR-05) rather than treat it as a missing user.
+- `IUserRepository` exposes intention-named methods: `QueryActive()` (filtered, the default for everything)
+  plus three that see deleted rows. All four are built on a single private helper in `UserRepository` — the
+  **only** place in the solution that calls `IgnoreQueryFilters()`, enforced by an architecture test that
+  scans the source tree for the invocation (and ignores comments, so the rule can still be documented).
+- The three opt-out methods each have a justified consumer: `QueryIncludingDeleted()` for the Admin-only
+  `GetDeletedUsersQueryHandler` behind `Policies.ManageUsers`; `GetByIdIncludingDeletedAsync()` for Admin
+  load-and-restore and for resolving a refresh token's owner; and `GetForAuthenticationAsync()` for sign-in,
+  which must see a deleted row to refuse it (BR-05) rather than treat it as a missing user.
 - Deleted users are read through a separate route, `GET /api/users/deleted`, carrying its own Admin policy.
   `GET /api/users` has no soft-delete parameter at all, so there is nothing for a non-Admin to set.
 
@@ -445,6 +447,37 @@ track the core major regardless.
 
 **Consequences:** a reviewer on Node 25 gets an engine warning; the README tells them to use Node 24. CI, if
 added, pins the same version, so "works on my machine" and "works in the pipeline" mean the same thing.
+
+---
+
+## ADR-0018 — Toolchain and test-library choices made during Phase 2
+
+**Status:** accepted (recorded while implementing, so the reasoning is not lost)
+
+**Solution format `.slnx`.** The .NET 10 SDK emits the XML solution format by default. Keeping it is safe
+here because the projects target `net10.0`, so anyone able to build this repository already has an SDK that
+understands `.slnx`; converting back would add a legacy file for no reader.
+
+**`NuGet.config` pins one source.** Central package management refuses to restore when several feeds are
+configured without source mapping, and the original failure was a private feed present only on the
+development machine. The file clears inherited sources and maps every package to nuget.org, which fixes the
+restore *and* makes a clone reproducible — plus it removes a dependency-confusion path, since no package can
+resolve from an unexpected feed.
+
+**Assertions use xUnit's own `Assert`.** FluentAssertions 8 and later require a paid commercial licence.
+Pulling in an alternative assertion library for tests this simple is not worth a dependency or a licence
+question in a repository meant to be read by a reviewer.
+
+**Options live in `Infrastructure/Configuration`, not in the API.** `AccessTokenIssuer` and
+`RefreshTokenService` consume `JwtOptions` and `RefreshTokenOptions`; putting those classes in the API would
+have pointed Infrastructure at the composition root and inverted the dependency the architecture is built on.
+API-only settings (`CorsOptions`) do live in the API.
+
+**Audit rows are written before `SaveChanges`, not after.** Entity keys are client-generated version 7
+GUIDs, so the target id is known before the insert. That lets the interceptor add its rows to the same
+transaction — there is no window in which a change exists without its audit row, and no second save to
+recurse through. The constraint this creates is documented in the interceptor: an audited entity with a
+database-generated key would have to be handled after the save instead.
 
 ---
 
