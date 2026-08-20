@@ -8,7 +8,9 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "e2e": "playwright test",
-    "lint": "ng lint"
+    "lint": "eslint .",
+    "lint:verify": "node scripts/verify-lint-rules.mjs",
+    "lint:styles": "node scripts/verify-logical-properties.mjs"
   },
   "private": true,
   "engines": {
@@ -32,11 +34,17 @@
     "@angular/build": "^21.2.21",
     "@angular/cli": "^21.2.21",
     "@angular/compiler-cli": "^21.2.0",
+    "@axe-core/playwright": "^4.10.0",
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
     "@testing-library/dom": "^10.4.1",
+    "angular-eslint": "^21.4.0",
+    "eslint": "^10.8.1",
+    "eslint-plugin-import-x": "^4.17.1",
     "jsdom": "^28.1.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2",
+    "typescript-eslint": "^8.67.0",
     "vitest": "^4.0.8"
   }
 }
