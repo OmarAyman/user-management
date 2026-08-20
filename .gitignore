@@ -1,0 +1,40 @@
+## .NET
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+.vs/
+TestResults/
+coverage/
+*.coverage
+*.trx
+artifacts/
+
+## Secrets - never commit real configuration
+appsettings.Development.json
+appsettings.Production.json
+appsettings.local.json
+*.pfx
+*.p12
+.env
+.env.*
+!.env.example
+
+## Node / Angular
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+yarn-error.log*
+*.tsbuildinfo
+playwright-report/
+test-results/
+
+## Editors / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
