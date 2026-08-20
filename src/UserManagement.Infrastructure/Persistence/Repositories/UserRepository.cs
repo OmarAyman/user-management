@@ -63,6 +63,23 @@ public sealed class UserRepository(ApplicationDbContext context) : IUserReposito
     public void Add(User user) => context.Users.Add(user);
 
     /// <summary>
+    /// Puts the client's concurrency token into the tracker as the row's original value, so EF adds it to the
+    /// UPDATE's WHERE clause and a stale write matches zero rows.
+    /// </summary>
+    /// <remarks>
+    /// Assigning to the entity's property would not work: EF compares the <i>original</i> value it read, not
+    /// the current one. Setting the original value is the documented way to say "this is the version the caller
+    /// edited" (ADR-0013).
+    /// </remarks>
+    public void ApplyConcurrencyToken(User user, byte[] rowVersion)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(rowVersion);
+
+        context.Entry(user).Property(entity => entity.RowVersion).OriginalValue = rowVersion;
+    }
+
+    /// <summary>
     /// The single soft-delete opt-out in the solution. Tracked, because two of its consumers load an entity in
     /// order to change it.
     /// </summary>

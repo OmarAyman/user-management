@@ -21,3 +21,25 @@ public interface ICurrentUserService
 
     bool IsAuthenticated { get; }
 }
+
+/// <summary>Helpers over <see cref="ICurrentUserService"/>.</summary>
+public static class CurrentUserServiceExtensions
+{
+    /// <summary>
+    /// The caller's id, or an authentication failure if there is none.
+    /// </summary>
+    /// <remarks>
+    /// The self-service handlers cannot proceed without a subject, and reaching them unauthenticated means the
+    /// endpoint is missing its <c>[Authorize]</c> attribute. Failing loudly here turns that wiring mistake into
+    /// a 401 instead of a null-reference exception - or, worse, a default id that matches a real row.
+    /// </remarks>
+    public static Guid RequireUserId(this ICurrentUserService currentUser)
+    {
+        ArgumentNullException.ThrowIfNull(currentUser);
+
+        return currentUser.UserId
+               ?? throw new Exceptions.AuthenticationFailedException(
+                   Domain.Constants.ErrorCodes.Unauthenticated,
+                   "The request is not authenticated.");
+    }
+}

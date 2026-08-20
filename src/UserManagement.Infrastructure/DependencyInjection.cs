@@ -75,6 +75,10 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(serviceProvider =>
             serviceProvider.GetRequiredService<ApplicationDbContext>());
 
+        // Confines EF Core's async query surface to one class, so Application can compose queries with plain
+        // System.Linq and still execute them asynchronously.
+        services.AddScoped<IQueryExecutor, EfQueryExecutor>();
+
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();

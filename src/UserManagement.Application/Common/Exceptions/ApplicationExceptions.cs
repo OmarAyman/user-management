@@ -12,6 +12,19 @@ public abstract class ApplicationLayerException(string errorCode, string message
     public string ErrorCode { get; } = errorCode;
 }
 
+/// <summary>
+/// The request is understood but unacceptable for a reason that is not a per-field validation failure. Maps to
+/// 400 with its own code - an unknown sort field, for instance, is not a "field is invalid" message a form can
+/// render next to an input, it is a contract violation.
+/// </summary>
+public sealed class BadRequestException(string errorCode, string message)
+    : ApplicationLayerException(errorCode, message)
+{
+    public static BadRequestException InvalidSortField(string field, IEnumerable<string> allowed) =>
+        new(ErrorCodes.InvalidSortField,
+            $"'{field}' is not a sortable field. Allowed values: {string.Join(", ", allowed)}.");
+}
+
 /// <summary>The target does not exist, or is not visible to this caller. Maps to 404.</summary>
 public sealed class NotFoundException(string message, string errorCode = ErrorCodes.ResourceNotFound)
     : ApplicationLayerException(errorCode, message)

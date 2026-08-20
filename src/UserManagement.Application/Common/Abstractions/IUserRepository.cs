@@ -50,4 +50,14 @@ public interface IUserRepository
     Task<int> CountActiveAdminsAsync(CancellationToken cancellationToken);
 
     void Add(User user);
+
+    /// <summary>
+    /// Tells the change tracker which version of the row the caller edited, so a stale write is refused.
+    /// </summary>
+    /// <remarks>
+    /// The concurrency token has to be applied through the tracker rather than assigned to the entity: the
+    /// column is engine-maintained, and what matters is the value EF puts in the UPDATE's WHERE clause. That
+    /// is an EF concept, so it lives behind this port instead of leaking DbContext into a handler (ADR-0013).
+    /// </remarks>
+    void ApplyConcurrencyToken(User user, byte[] rowVersion);
 }
