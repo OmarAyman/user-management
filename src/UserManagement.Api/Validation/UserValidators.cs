@@ -1,4 +1,5 @@
-using FluentValidation;
+﻿using FluentValidation;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using UserManagement.Api.Contracts.Users;
 using UserManagement.Application.Common.Models;
@@ -13,14 +14,21 @@ namespace UserManagement.Api.Validation;
 /// </summary>
 internal static class UserFieldRules
 {
-    internal static IRuleBuilderOptions<T, string> Username<T>(this IRuleBuilder<T, string> rule) =>
+    // Custom messages resolve through the same resource file as the error titles, so an Arabic request gets
+    // Arabic field errors. FluentValidation's own built-in messages (NotEmpty, MaximumLength, EmailAddress)
+    // are already translated by its language manager, which reads CultureInfo.CurrentUICulture - set for the
+    // request by the localization middleware. So neither kind of message needs a language check anywhere.
+
+    internal static IRuleBuilderOptions<T, string> Username<T>(
+        this IRuleBuilder<T, string> rule,
+        IStringLocalizer localizer) =>
         rule.NotEmpty()
             .MinimumLength(3)
             .MaximumLength(UserConstraints.UsernameMaxLength)
             // Letters, digits, dot, underscore and hyphen. Restrictive on purpose: a username appears in audit
             // history and in URLs, so exotic characters buy nothing and cost display and comparison bugs.
             .Matches("^[a-zA-Z0-9._-]+$")
-            .WithMessage("Username may contain only letters, digits, dots, underscores and hyphens.");
+            .WithMessage(_ => localizer[MessageKeys.UsernamePattern].Value);
 
     internal static IRuleBuilderOptions<T, string> Email<T>(this IRuleBuilder<T, string> rule) =>
         rule.NotEmpty()
@@ -40,7 +48,8 @@ internal static class UserFieldRules
     /// </remarks>
     internal static IRuleBuilderOptions<T, string> Password<T>(
         this IRuleBuilder<T, string> rule,
-        PasswordPolicyOptions policy)
+        PasswordPolicyOptions policy,
+        IStringLocalizer localizer)
     {
         var builder = rule.NotEmpty()
             .MinimumLength(policy.MinimumLength)
@@ -48,26 +57,28 @@ internal static class UserFieldRules
 
         if (policy.RequireUppercase)
         {
-            builder = builder.Matches("[A-Z]").WithMessage("Password must contain an uppercase letter.");
+            builder = builder.Matches("[A-Z]").WithMessage(_ => localizer[MessageKeys.PasswordUppercase].Value);
         }
 
         if (policy.RequireLowercase)
         {
-            builder = builder.Matches("[a-z]").WithMessage("Password must contain a lowercase letter.");
+            builder = builder.Matches("[a-z]").WithMessage(_ => localizer[MessageKeys.PasswordLowercase].Value);
         }
 
         if (policy.RequireDigit)
         {
-            builder = builder.Matches("[0-9]").WithMessage("Password must contain a digit.");
+            builder = builder.Matches("[0-9]").WithMessage(_ => localizer[MessageKeys.PasswordDigit].Value);
         }
 
         return builder;
     }
 
-    internal static IRuleBuilderOptions<T, string> ConcurrencyTokenRule<T>(this IRuleBuilder<T, string> rule) =>
+    internal static IRuleBuilderOptions<T, string> ConcurrencyTokenRule<T>(
+        this IRuleBuilder<T, string> rule,
+        IStringLocalizer localizer) =>
         rule.NotEmpty()
             .Must(value => ConcurrencyToken.IsValid(value))
-            .WithMessage("The concurrency token is malformed. Reload the record and try again.");
+            .WithMessage(_ => localizer[MessageKeys.RowVersionMalformed].Value);
 }
 
 public sealed class UserQueryParametersValidator : AbstractValidator<UserQueryParameters>
@@ -96,45 +107,49 @@ public sealed class UserQueryParametersValidator : AbstractValidator<UserQueryPa
 
 public sealed class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
 {
-    public CreateUserRequestValidator(IOptions<PasswordPolicyOptions> passwordPolicy)
+    public CreateUserRequestValidator(
+        IOptions<PasswordPolicyOptions> passwordPolicy,
+        IStringLocalizer<ErrorMessages> localizer)
     {
         ArgumentNullException.ThrowIfNull(passwordPolicy);
 
-        RuleFor(request => request.Username).Username();
+        RuleFor(request => request.Username).Username(localizer);
         RuleFor(request => request.Email).Email();
         RuleFor(request => request.FirstName).PersonName();
         RuleFor(request => request.LastName).PersonName();
-        RuleFor(request => request.Password).Password(passwordPolicy.Value);
+        RuleFor(request => request.Password).Password(passwordPolicy.Value, localizer);
         RuleFor(request => request.RoleId).GreaterThan(0);
     }
 }
 
 public sealed class UpdateUserRequestValidator : AbstractValidator<UpdateUserRequest>
 {
-    public UpdateUserRequestValidator()
+    public UpdateUserRequestValidator(IStringLocalizer<ErrorMessages> localizer)
     {
         RuleFor(request => request.Email).Email();
         RuleFor(request => request.FirstName).PersonName();
         RuleFor(request => request.LastName).PersonName();
         RuleFor(request => request.RoleId).GreaterThan(0);
-        RuleFor(request => request.RowVersion).ConcurrencyTokenRule();
+        RuleFor(request => request.RowVersion).ConcurrencyTokenRule(localizer);
     }
 }
 
 public sealed class UpdateProfileRequestValidator : AbstractValidator<UpdateProfileRequest>
 {
-    public UpdateProfileRequestValidator()
+    public UpdateProfileRequestValidator(IStringLocalizer<ErrorMessages> localizer)
     {
         RuleFor(request => request.FirstName).PersonName();
         RuleFor(request => request.LastName).PersonName();
         RuleFor(request => request.Email).Email();
-        RuleFor(request => request.RowVersion).ConcurrencyTokenRule();
+        RuleFor(request => request.RowVersion).ConcurrencyTokenRule(localizer);
     }
 }
 
 public sealed class ChangePasswordRequestValidator : AbstractValidator<ChangePasswordRequest>
 {
-    public ChangePasswordRequestValidator(IOptions<PasswordPolicyOptions> passwordPolicy)
+    public ChangePasswordRequestValidator(
+        IOptions<PasswordPolicyOptions> passwordPolicy,
+        IStringLocalizer<ErrorMessages> localizer)
     {
         ArgumentNullException.ThrowIfNull(passwordPolicy);
 
@@ -142,26 +157,27 @@ public sealed class ChangePasswordRequestValidator : AbstractValidator<ChangePas
 
         // The new password must meet the policy; the current one is only checked for presence, because
         // enforcing today's policy on an existing credential would lock out anyone whose password predates it.
-        RuleFor(request => request.NewPassword).Password(passwordPolicy.Value);
+        RuleFor(request => request.NewPassword).Password(passwordPolicy.Value, localizer);
 
         RuleFor(request => request.NewPassword)
             .NotEqual(request => request.CurrentPassword)
-            .WithMessage("The new password must be different from the current password.");
+            .WithMessage(_ => localizer[MessageKeys.PasswordNotSameAsCurrent].Value);
     }
 }
 
 public sealed class RestoreUserRequestValidator : AbstractValidator<RestoreUserRequest>
 {
-    public RestoreUserRequestValidator() => RuleFor(request => request.RowVersion).ConcurrencyTokenRule();
+    public RestoreUserRequestValidator(IStringLocalizer<ErrorMessages> localizer) =>
+        RuleFor(request => request.RowVersion).ConcurrencyTokenRule(localizer);
 }
 
 public sealed class AvailabilityQueryParametersValidator : AbstractValidator<AvailabilityQueryParameters>
 {
-    public AvailabilityQueryParametersValidator()
+    public AvailabilityQueryParametersValidator(IStringLocalizer<ErrorMessages> localizer)
     {
         RuleFor(query => query)
             .Must(query => !string.IsNullOrWhiteSpace(query.Username) || !string.IsNullOrWhiteSpace(query.Email))
-            .WithMessage("Provide a username, an email, or both.");
+            .WithMessage(_ => localizer[MessageKeys.AvailabilityAtLeastOne].Value);
 
         RuleFor(query => query.Username)
             .MaximumLength(UserConstraints.UsernameMaxLength);
@@ -170,3 +186,5 @@ public sealed class AvailabilityQueryParametersValidator : AbstractValidator<Ava
             .MaximumLength(UserConstraints.EmailMaxLength);
     }
 }
+
+

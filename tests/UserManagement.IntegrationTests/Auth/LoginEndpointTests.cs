@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -66,11 +66,15 @@ public sealed class LoginEndpointTests(ApiFixture fixture)
     [Fact]
     public async Task A_wrong_password_is_rejected_with_the_generic_code()
     {
+        // A throwaway account, not a demo one: five wrong passwords lock an account, and these tests share a
+        // database, so pointing failure paths at jdoe locks it for every other test in the suite.
+        var username = await SeedUserAsync("wrongpassword", DemoCredentials.UserPassword);
+
         using var client = fixture.Api.CreateCookieClient();
 
         var response = await client.PostAsJsonAsync(
             new Uri("/api/auth/login", UriKind.Relative),
-            new { username = DemoCredentials.UserUsername, password = "WrongPassword@1" });
+            new { username, password = "WrongPassword@1" });
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.Equal(ErrorCodes.InvalidCredentials, await response.ReadErrorCodeAsync());
@@ -79,6 +83,8 @@ public sealed class LoginEndpointTests(ApiFixture fixture)
     [Fact]
     public async Task An_unknown_username_is_indistinguishable_from_a_wrong_password()
     {
+        var username = await SeedUserAsync("indistinguishable", DemoCredentials.UserPassword);
+
         using var client = fixture.Api.CreateCookieClient();
 
         var unknown = await client.PostAsJsonAsync(
@@ -87,7 +93,7 @@ public sealed class LoginEndpointTests(ApiFixture fixture)
 
         var wrongPassword = await client.PostAsJsonAsync(
             new Uri("/api/auth/login", UriKind.Relative),
-            new { username = DemoCredentials.UserUsername, password = "WrongPassword@1" });
+            new { username, password = "WrongPassword@1" });
 
         // Same status, same code, same title: the endpoint is not a user-enumeration oracle.
         Assert.Equal(wrongPassword.StatusCode, unknown.StatusCode);
@@ -240,3 +246,4 @@ public sealed class LoginEndpointTests(ApiFixture fixture)
         return username;
     }
 }
+

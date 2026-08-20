@@ -72,11 +72,35 @@ public sealed class UnprocessableEntityException(string errorCode, string messag
 /// One or more fields failed validation. Maps to 400 with a per-field <c>errors</c> dictionary, so a form can
 /// show the message next to the field that caused it instead of a single banner.
 /// </summary>
-public sealed class ValidationException(IDictionary<string, string[]> errors)
-    : ApplicationLayerException(ErrorCodes.ValidationError, "One or more validation errors occurred.")
+public sealed class ValidationException : ApplicationLayerException
 {
-    public IDictionary<string, string[]> Errors { get; } = errors;
+    public ValidationException(IDictionary<string, string[]> errors)
+        : base(ErrorCodes.ValidationError, "One or more validation errors occurred.") => Errors = errors;
 
-    public static ValidationException ForField(string field, string message) =>
-        new(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { [field] = [message] });
+    private ValidationException(IReadOnlyList<FieldMessage> keyedErrors)
+        : base(ErrorCodes.ValidationError, "One or more validation errors occurred.")
+    {
+        Errors = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+        KeyedErrors = keyedErrors;
+    }
+
+    /// <summary>Already-rendered messages, as produced by the validators at the API boundary.</summary>
+    public IDictionary<string, string[]> Errors { get; }
+
+    /// <summary>
+    /// Messages a use case wants to say but cannot render.
+    /// </summary>
+    /// <remarks>
+    /// A handler knows which field is wrong and why; it does not know the caller's language, and it must not -
+    /// giving Application a localizer would put presentation in the layer that owns rules. So it names a
+    /// resource key and the API renders it. This is what keeps handler-produced field errors localized without
+    /// an English string escaping from a use case into an Arabic response.
+    /// </remarks>
+    public IReadOnlyList<FieldMessage> KeyedErrors { get; } = [];
+
+    public static ValidationException ForKey(string field, string messageKey, params object[] arguments) =>
+        new([new FieldMessage(field, messageKey, arguments)]);
 }
+
+/// <summary>A field error expressed as a resource key, rendered at the API boundary.</summary>
+public sealed record FieldMessage(string Field, string MessageKey, object[] Arguments);

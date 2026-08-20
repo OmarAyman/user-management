@@ -1,7 +1,8 @@
-using UserManagement.Application.Common.Abstractions;
+﻿using UserManagement.Application.Common.Abstractions;
 using UserManagement.Application.Common.Exceptions;
 using UserManagement.Application.Common.Models;
 using UserManagement.Application.Features.Users.Dtos;
+using UserManagement.Domain.Constants;
 using UserManagement.Domain.Entities;
 
 namespace UserManagement.Application.Features.Users.GetUsers;
@@ -47,7 +48,7 @@ public sealed class GetUsersQueryHandler(
         {
             // A filter on a role that does not exist is a client mistake, not an empty result: returning an
             // empty page would let a typo look like "no users hold this role".
-            throw ValidationException.ForField("roleId", $"Role '{roleId}' does not exist.");
+            throw ValidationException.ForKey("roleId", MessageKeys.RoleNotFound, roleId);
         }
 
         return await users.QueryActive()
@@ -118,3 +119,5 @@ public static class UserQueryComposition
         return new PagedResult<UserListItemDto>(items, query.PageNumber, query.PageSize, totalCount);
     }
 }
+
+

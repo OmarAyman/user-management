@@ -1,6 +1,7 @@
-using Microsoft.AspNetCore.Diagnostics;
+﻿using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using UserManagement.Application.Common.Abstractions;
 using UserManagement.Application.Common.Exceptions;
 using UserManagement.Domain.Constants;
 using UserManagement.Domain.Exceptions;
@@ -18,7 +19,8 @@ namespace UserManagement.Api.ErrorHandling;
 /// </remarks>
 public sealed class ApplicationExceptionHandler(
     ILogger<ApplicationExceptionHandler> logger,
-    IErrorMessageProvider messages) : IExceptionHandler
+    IErrorMessageProvider messages,
+    IMessageLocalizer localizer) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext,
@@ -54,7 +56,7 @@ public sealed class ApplicationExceptionHandler(
     {
         ValidationException validation => ProblemDetailsBuilder.BuildValidation(
             context,
-            validation.Errors,
+            RenderFieldErrors(validation),
             messages.GetTitle(ErrorCodes.ValidationError)),
 
         // Not a per-field validation failure, so it carries its own code rather than VALIDATION_ERROR: an
@@ -85,6 +87,34 @@ public sealed class ApplicationExceptionHandler(
         _ => null,
     };
 
+    /// <summary>
+    /// Merges the validators' already-rendered messages with the use cases' keyed ones, rendering the latter in
+    /// the request's culture. This is the point where an Application-layer field error becomes text, so a
+    /// handler never has to know which language the caller reads.
+    /// </summary>
+    private IDictionary<string, string[]> RenderFieldErrors(ValidationException exception)
+    {
+        if (exception.KeyedErrors.Count == 0)
+        {
+            return exception.Errors;
+        }
+
+        var merged = new Dictionary<string, string[]>(exception.Errors, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in exception.KeyedErrors.GroupBy(error => error.Field, StringComparer.OrdinalIgnoreCase))
+        {
+            var rendered = group
+                .Select(error => localizer.Get(error.MessageKey, error.Arguments))
+                .ToArray();
+
+            merged[group.Key] = merged.TryGetValue(group.Key, out var existing)
+                ? [.. existing, .. rendered]
+                : rendered;
+        }
+
+        return merged;
+    }
+
     private ProblemDetails Build(HttpContext context, int statusCode, string errorCode) =>
         ProblemDetailsBuilder.Build(
             context,
@@ -106,3 +136,4 @@ public sealed class ApplicationExceptionHandler(
         return problem;
     }
 }
+

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using UserManagement.Application.Common.Abstractions;
 using UserManagement.Application.Common.Exceptions;
 using UserManagement.Application.Common.Models;
@@ -65,7 +65,7 @@ public sealed class GetAuditLogsQueryHandler(
 
         if (query.FromUtc is { } from && query.ToUtc is { } to && from > to)
         {
-            throw ValidationException.ForField("fromUtc", "The start of the range must not be after its end.");
+            throw ValidationException.ForKey("fromUtc", MessageKeys.DateRangeInverted);
         }
 
         var filtered = ApplyFilters(auditLogs.Query(), query);
@@ -202,3 +202,4 @@ public sealed class GetAuditLogsQueryHandler(
         }
     }
 }
+

@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    Arabic messages. Written as Arabic sentences rather than word-for-word renderings of the English, because a
+    literal translation of English word order reads as machine output to a native speaker.
+
+    Every key in ErrorMessages.resx must exist here: a missing Arabic string falls back to English silently,
+    which is the most common i18n defect and the one most likely to survive a demo. A parity test fails the
+    build instead.
+  -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Title.VALIDATION_ERROR" xml:space="preserve">
+    <value>حدث خطأ أو أكثر في التحقق من البيانات.</value>
+  </data>
+  <data name="Detail.VALIDATION_ERROR" xml:space="preserve">
+    <value>يحتوي الطلب على قيم غير صحيحة.</value>
+  </data>
+  <data name="Title.INVALID_SORT_FIELD" xml:space="preserve">
+    <value>حقل ترتيب غير صحيح.</value>
+  </data>
+  <data name="Detail.INVALID_SORT_FIELD" xml:space="preserve">
+    <value>حقل الترتيب المطلوب غير مدعوم.</value>
+  </data>
+  <data name="Title.INVALID_CREDENTIALS" xml:space="preserve">
+    <value>فشل تسجيل الدخول.</value>
+  </data>
+  <data name="Detail.INVALID_CREDENTIALS" xml:space="preserve">
+    <value>اسم المستخدم أو كلمة المرور غير صحيحة.</value>
+  </data>
+  <data name="Title.ACCOUNT_LOCKED" xml:space="preserve">
+    <value>الحساب مقفل مؤقتاً.</value>
+  </data>
+  <data name="Detail.ACCOUNT_LOCKED" xml:space="preserve">
+    <value>عدد محاولات تسجيل الدخول الفاشلة كبير. حاول مرة أخرى لاحقاً.</value>
+  </data>
+  <data name="Title.UNAUTHENTICATED" xml:space="preserve">
+    <value>تسجيل الدخول مطلوب.</value>
+  </data>
+  <data name="Detail.UNAUTHENTICATED" xml:space="preserve">
+    <value>يلزم رمز وصول صالح.</value>
+  </data>
+  <data name="Title.FORBIDDEN" xml:space="preserve">
+    <value>غير مسموح.</value>
+  </data>
+  <data name="Detail.FORBIDDEN" xml:space="preserve">
+    <value>صلاحيتك لا تسمح بهذه العملية.</value>
+  </data>
+  <data name="Title.CANNOT_DELETE_SELF" xml:space="preserve">
+    <value>غير مسموح.</value>
+  </data>
+  <data name="Detail.CANNOT_DELETE_SELF" xml:space="preserve">
+    <value>لا يمكنك حذف حسابك الخاص.</value>
+  </data>
+  <data name="Title.RESOURCE_NOT_FOUND" xml:space="preserve">
+    <value>غير موجود.</value>
+  </data>
+  <data name="Detail.RESOURCE_NOT_FOUND" xml:space="preserve">
+    <value>العنصر المطلوب غير موجود.</value>
+  </data>
+  <data name="Title.RESOURCE_CONFLICT" xml:space="preserve">
+    <value>تعارض.</value>
+  </data>
+  <data name="Detail.RESOURCE_CONFLICT" xml:space="preserve">
+    <value>الطلب يتعارض مع الحالة الحالية.</value>
+  </data>
+  <data name="Title.RESOURCE_MODIFIED" xml:space="preserve">
+    <value>تم تعديل السجل من مستخدم آخر.</value>
+  </data>
+  <data name="Detail.RESOURCE_MODIFIED" xml:space="preserve">
+    <value>أعد تحميل السجل ثم طبّق تعديلاتك مرة أخرى.</value>
+  </data>
+  <data name="Title.USERNAME_ALREADY_EXISTS" xml:space="preserve">
+    <value>اسم المستخدم مستخدم بالفعل.</value>
+  </data>
+  <data name="Detail.USERNAME_ALREADY_EXISTS" xml:space="preserve">
+    <value>يستخدم مستخدم نشط آخر اسم المستخدم هذا.</value>
+  </data>
+  <data name="Title.EMAIL_ALREADY_EXISTS" xml:space="preserve">
+    <value>البريد الإلكتروني مستخدم بالفعل.</value>
+  </data>
+  <data name="Detail.EMAIL_ALREADY_EXISTS" xml:space="preserve">
+    <value>يستخدم مستخدم نشط آخر هذا البريد الإلكتروني.</value>
+  </data>
+  <data name="Title.USER_ALREADY_DELETED" xml:space="preserve">
+    <value>المستخدم محذوف بالفعل.</value>
+  </data>
+  <data name="Detail.USER_ALREADY_DELETED" xml:space="preserve">
+    <value>تم حذف هذا المستخدم مسبقاً.</value>
+  </data>
+  <data name="Title.USER_NOT_DELETED" xml:space="preserve">
+    <value>المستخدم غير محذوف.</value>
+  </data>
+  <data name="Detail.USER_NOT_DELETED" xml:space="preserve">
+    <value>يمكن استعادة المستخدمين المحذوفين فقط.</value>
+  </data>
+  <data name="Title.LAST_ADMIN_CANNOT_BE_REMOVED" xml:space="preserve">
+    <value>آخر مدير للنظام.</value>
+  </data>
+  <data name="Detail.LAST_ADMIN_CANNOT_BE_REMOVED" xml:space="preserve">
+    <value>يجب أن يبقى في النظام مدير نشط واحد على الأقل.</value>
+  </data>
+  <data name="Title.CANNOT_CHANGE_OWN_ROLE" xml:space="preserve">
+    <value>غير مسموح.</value>
+  </data>
+  <data name="Detail.CANNOT_CHANGE_OWN_ROLE" xml:space="preserve">
+    <value>لا يمكنك تغيير صلاحيتك الخاصة.</value>
+  </data>
+  <data name="Title.RATE_LIMITED" xml:space="preserve">
+    <value>عدد الطلبات كبير.</value>
+  </data>
+  <data name="Detail.RATE_LIMITED" xml:space="preserve">
+    <value>يرجى التمهّل والمحاولة بعد قليل.</value>
+  </data>
+  <data name="Title.INTERNAL_ERROR" xml:space="preserve">
+    <value>حدث خطأ غير متوقع.</value>
+  </data>
+  <data name="Detail.INTERNAL_ERROR" xml:space="preserve">
+    <value />
+    <comment>Deliberately empty, matching the English file: an unexpected failure must not describe itself.</comment>
+  </data>
+
+  <data name="Message.RoleNotFound" xml:space="preserve">
+    <value>الصلاحية '{0}' غير موجودة.</value>
+  </data>
+  <data name="Message.DateRangeInverted" xml:space="preserve">
+    <value>يجب ألا يكون تاريخ البداية بعد تاريخ النهاية.</value>
+  </data>
+  <data name="Validation.Username.Pattern" xml:space="preserve">
+    <value>يسمح اسم المستخدم بالحروف والأرقام والنقطة والشرطة السفلية والشرطة فقط.</value>
+  </data>
+  <data name="Validation.Password.Uppercase" xml:space="preserve">
+    <value>يجب أن تحتوي كلمة المرور على حرف كبير.</value>
+  </data>
+  <data name="Validation.Password.Lowercase" xml:space="preserve">
+    <value>يجب أن تحتوي كلمة المرور على حرف صغير.</value>
+  </data>
+  <data name="Validation.Password.Digit" xml:space="preserve">
+    <value>يجب أن تحتوي كلمة المرور على رقم.</value>
+  </data>
+  <data name="Validation.Password.NotSameAsCurrent" xml:space="preserve">
+    <value>يجب أن تختلف كلمة المرور الجديدة عن الحالية.</value>
+  </data>
+  <data name="Validation.RowVersion.Malformed" xml:space="preserve">
+    <value>رمز التزامن غير صالح. أعد تحميل السجل وحاول مرة أخرى.</value>
+  </data>
+  <data name="Validation.Availability.AtLeastOne" xml:space="preserve">
+    <value>أدخل اسم مستخدم أو بريداً إلكترونياً أو كليهما.</value>
+  </data>
+</root>

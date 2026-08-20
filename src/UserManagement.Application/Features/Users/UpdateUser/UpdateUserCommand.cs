@@ -1,4 +1,4 @@
-using UserManagement.Application.Common.Abstractions;
+﻿using UserManagement.Application.Common.Abstractions;
 using UserManagement.Application.Common.Exceptions;
 using UserManagement.Application.Features.Users.Dtos;
 using UserManagement.Domain.Constants;
@@ -41,9 +41,7 @@ public sealed class UpdateUserCommandHandler(
                    ?? throw NotFoundException.User(command.Id);
 
         var role = await roles.GetByIdAsync(command.RoleId, cancellationToken)
-                   ?? throw ValidationException.ForField(
-                       "roleId",
-                       $"Role '{command.RoleId}' does not exist.");
+                   ?? throw ValidationException.ForKey("roleId", MessageKeys.RoleNotFound, command.RoleId);
 
         users.ApplyConcurrencyToken(user, command.RowVersion);
 
@@ -98,3 +96,4 @@ public sealed class UpdateUserCommandHandler(
         }
     }
 }
+

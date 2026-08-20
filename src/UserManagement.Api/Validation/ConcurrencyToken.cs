@@ -1,4 +1,5 @@
-using UserManagement.Application.Common.Exceptions;
+﻿using UserManagement.Application.Common.Exceptions;
+using UserManagement.Domain.Constants;
 
 namespace UserManagement.Api.Validation;
 
@@ -23,11 +24,10 @@ public static class ConcurrencyToken
     {
         if (!IsValid(value))
         {
-            throw ValidationException.ForField(
-                "rowVersion",
-                "The concurrency token is missing or malformed. Reload the record and try again.");
+            throw ValidationException.ForKey("rowVersion", MessageKeys.RowVersionMalformed);
         }
 
         return Convert.FromBase64String(value!);
     }
 }
+

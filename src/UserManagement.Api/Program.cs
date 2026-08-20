@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -71,8 +71,23 @@ builder.Services.AddOptions<PasswordPolicyOptions>()
 // client actually posted. Business rules stay in the handlers, where no caller can bypass them.
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly, includeInternalTypes: true);
 
+// Resource-backed localization. ResourcesPath must match the folder holding ErrorMessages.resx, and the
+// marker type's namespace must be the root namespace, or the lookup fails silently and returns keys.
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+
+// One implementation serves both ports: error titles and details by code, and message keys for the field
+// errors that use cases name but cannot render.
+//
+// Singleton, not scoped, and that is a correctness requirement rather than an optimisation: ASP.NET Core
+// registers IExceptionHandler implementations as singletons, so a scoped dependency here fails at startup with
+// "cannot consume scoped service from singleton". It is safe because IStringLocalizer resolves the culture from
+// the ambient CultureInfo.CurrentUICulture, which the localization middleware sets per request - the instance
+// holds no request state of its own.
+builder.Services.AddSingleton<LocalizedErrorMessageProvider>();
+builder.Services.AddSingleton<IErrorMessageProvider>(sp => sp.GetRequiredService<LocalizedErrorMessageProvider>());
+builder.Services.AddSingleton<IMessageLocalizer>(sp => sp.GetRequiredService<LocalizedErrorMessageProvider>());
+
 // Ordered chain: expected failures first, then the catch-all that discloses nothing.
-builder.Services.AddSingleton<IErrorMessageProvider, EnglishErrorMessageProvider>();
 builder.Services.AddExceptionHandler<ApplicationExceptionHandler>();
 builder.Services.AddExceptionHandler<UnhandledExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -141,6 +156,10 @@ app.UseSerilogRequestLogging();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
+// Before the exception handler and the endpoints: validators and error handlers resolve their messages from
+// CultureInfo.CurrentUICulture, and this is what sets it from ?culture= or Accept-Language.
+app.UseRequestLocalization(LocalizationConfiguration.Build());
+
 // Wraps everything downstream, so a failure anywhere below becomes a ProblemDetails rather than a stack trace.
 app.UseExceptionHandler();
 
@@ -199,3 +218,5 @@ static async Task ApplyDatabaseStartupTasksAsync(WebApplication app)
 public partial class Program
 {
 }
+
+

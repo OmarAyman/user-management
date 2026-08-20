@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    English messages, and the invariant fallback for any culture without its own file.
+
+    Keys are stable and never shown to a user. "Title.<ERROR_CODE>" and "Detail.<ERROR_CODE>" mirror the codes
+    in ErrorCodes.cs, so adding an error code means adding two entries here and two in the Arabic file - a
+    parity test fails the build if either is missing.
+  -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Title.VALIDATION_ERROR" xml:space="preserve">
+    <value>One or more validation errors occurred.</value>
+  </data>
+  <data name="Detail.VALIDATION_ERROR" xml:space="preserve">
+    <value>The request contains invalid values.</value>
+  </data>
+  <data name="Title.INVALID_SORT_FIELD" xml:space="preserve">
+    <value>Invalid sort field.</value>
+  </data>
+  <data name="Detail.INVALID_SORT_FIELD" xml:space="preserve">
+    <value>The requested sort field is not supported.</value>
+  </data>
+  <data name="Title.INVALID_CREDENTIALS" xml:space="preserve">
+    <value>Sign-in failed.</value>
+  </data>
+  <data name="Detail.INVALID_CREDENTIALS" xml:space="preserve">
+    <value>The username or password is incorrect.</value>
+  </data>
+  <data name="Title.ACCOUNT_LOCKED" xml:space="preserve">
+    <value>Account temporarily locked.</value>
+  </data>
+  <data name="Detail.ACCOUNT_LOCKED" xml:space="preserve">
+    <value>Too many failed sign-in attempts. Try again later.</value>
+  </data>
+  <data name="Title.UNAUTHENTICATED" xml:space="preserve">
+    <value>Authentication required.</value>
+  </data>
+  <data name="Detail.UNAUTHENTICATED" xml:space="preserve">
+    <value>A valid access token is required.</value>
+  </data>
+  <data name="Title.FORBIDDEN" xml:space="preserve">
+    <value>Not permitted.</value>
+  </data>
+  <data name="Detail.FORBIDDEN" xml:space="preserve">
+    <value>Your role does not allow this operation.</value>
+  </data>
+  <data name="Title.CANNOT_DELETE_SELF" xml:space="preserve">
+    <value>Not permitted.</value>
+  </data>
+  <data name="Detail.CANNOT_DELETE_SELF" xml:space="preserve">
+    <value>You cannot delete your own account.</value>
+  </data>
+  <data name="Title.RESOURCE_NOT_FOUND" xml:space="preserve">
+    <value>Not found.</value>
+  </data>
+  <data name="Detail.RESOURCE_NOT_FOUND" xml:space="preserve">
+    <value>The requested resource does not exist.</value>
+  </data>
+  <data name="Title.RESOURCE_CONFLICT" xml:space="preserve">
+    <value>Conflict.</value>
+  </data>
+  <data name="Detail.RESOURCE_CONFLICT" xml:space="preserve">
+    <value>The request conflicts with the current state.</value>
+  </data>
+  <data name="Title.RESOURCE_MODIFIED" xml:space="preserve">
+    <value>The record was changed by someone else.</value>
+  </data>
+  <data name="Detail.RESOURCE_MODIFIED" xml:space="preserve">
+    <value>Reload the record and apply your changes again.</value>
+  </data>
+  <data name="Title.USERNAME_ALREADY_EXISTS" xml:space="preserve">
+    <value>Username already exists.</value>
+  </data>
+  <data name="Detail.USERNAME_ALREADY_EXISTS" xml:space="preserve">
+    <value>Another active user already uses this username.</value>
+  </data>
+  <data name="Title.EMAIL_ALREADY_EXISTS" xml:space="preserve">
+    <value>Email already exists.</value>
+  </data>
+  <data name="Detail.EMAIL_ALREADY_EXISTS" xml:space="preserve">
+    <value>Another active user already uses this email address.</value>
+  </data>
+  <data name="Title.USER_ALREADY_DELETED" xml:space="preserve">
+    <value>User already deleted.</value>
+  </data>
+  <data name="Detail.USER_ALREADY_DELETED" xml:space="preserve">
+    <value>This user has already been deleted.</value>
+  </data>
+  <data name="Title.USER_NOT_DELETED" xml:space="preserve">
+    <value>User is not deleted.</value>
+  </data>
+  <data name="Detail.USER_NOT_DELETED" xml:space="preserve">
+    <value>Only a deleted user can be restored.</value>
+  </data>
+  <data name="Title.LAST_ADMIN_CANNOT_BE_REMOVED" xml:space="preserve">
+    <value>Last administrator.</value>
+  </data>
+  <data name="Detail.LAST_ADMIN_CANNOT_BE_REMOVED" xml:space="preserve">
+    <value>The system must keep at least one active administrator.</value>
+  </data>
+  <data name="Title.CANNOT_CHANGE_OWN_ROLE" xml:space="preserve">
+    <value>Not permitted.</value>
+  </data>
+  <data name="Detail.CANNOT_CHANGE_OWN_ROLE" xml:space="preserve">
+    <value>You cannot change your own role.</value>
+  </data>
+  <data name="Title.RATE_LIMITED" xml:space="preserve">
+    <value>Too many requests.</value>
+  </data>
+  <data name="Detail.RATE_LIMITED" xml:space="preserve">
+    <value>Slow down and try again shortly.</value>
+  </data>
+  <data name="Title.INTERNAL_ERROR" xml:space="preserve">
+    <value>An unexpected error occurred.</value>
+  </data>
+  <data name="Detail.INTERNAL_ERROR" xml:space="preserve">
+    <value />
+    <comment>Deliberately empty: an unexpected failure must not describe itself to a client.</comment>
+  </data>
+
+  <data name="Message.RoleNotFound" xml:space="preserve">
+    <value>Role '{0}' does not exist.</value>
+  </data>
+  <data name="Message.DateRangeInverted" xml:space="preserve">
+    <value>The start of the range must not be after its end.</value>
+  </data>
+  <data name="Validation.Username.Pattern" xml:space="preserve">
+    <value>Username may contain only letters, digits, dots, underscores and hyphens.</value>
+  </data>
+  <data name="Validation.Password.Uppercase" xml:space="preserve">
+    <value>Password must contain an uppercase letter.</value>
+  </data>
+  <data name="Validation.Password.Lowercase" xml:space="preserve">
+    <value>Password must contain a lowercase letter.</value>
+  </data>
+  <data name="Validation.Password.Digit" xml:space="preserve">
+    <value>Password must contain a digit.</value>
+  </data>
+  <data name="Validation.Password.NotSameAsCurrent" xml:space="preserve">
+    <value>The new password must be different from the current password.</value>
+  </data>
+  <data name="Validation.RowVersion.Malformed" xml:space="preserve">
+    <value>The concurrency token is malformed. Reload the record and try again.</value>
+  </data>
+  <data name="Validation.Availability.AtLeastOne" xml:space="preserve">
+    <value>Provide a username, an email, or both.</value>
+  </data>
+</root>

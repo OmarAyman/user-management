@@ -1,6 +1,7 @@
-using UserManagement.Application.Common.Abstractions;
+﻿using UserManagement.Application.Common.Abstractions;
 using UserManagement.Application.Common.Exceptions;
 using UserManagement.Application.Features.Users.Dtos;
+using UserManagement.Domain.Constants;
 using UserManagement.Domain.Entities;
 
 namespace UserManagement.Application.Features.Users.CreateUser;
@@ -35,9 +36,7 @@ public sealed class CreateUserCommandHandler(
         ArgumentNullException.ThrowIfNull(command);
 
         var role = await roles.GetByIdAsync(command.RoleId, cancellationToken)
-                   ?? throw ValidationException.ForField(
-                       "roleId",
-                       $"Role '{command.RoleId}' does not exist.");
+                   ?? throw ValidationException.ForKey("roleId", MessageKeys.RoleNotFound, command.RoleId);
 
         if (await users.IsUsernameTakenAsync(command.Username, null, cancellationToken))
         {
@@ -68,3 +67,5 @@ public sealed class CreateUserCommandHandler(
         return UserProjections.ToDetails(user, role.Name);
     }
 }
+
+
