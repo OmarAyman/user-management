@@ -44,8 +44,23 @@ body {
   --mat-snack-bar-supporting-text-color: var(--mat-sys-on-error-container);
 }
 
-/* A visible focus ring everywhere: keyboard users need to see where they are. */
-:focus-visible {
+/*
+  A visible focus ring for keyboard users.
+
+  The element selectors are not decoration. Material's button styles set `outline: none`, and because those
+  styles are injected after this sheet a bare `:focus-visible` rule loses on equal specificity - the ring was
+  silently absent on every button until an accessibility test measured the computed outline and found none.
+  Naming the element raises specificity above Material's class selectors without resorting to !important.
+
+  Text inputs are deliberately excluded: a Material form field indicates focus with its floating label and
+  line ripple, and adding an outline on top of that is visual noise rather than clarity.
+*/
+:focus-visible,
+button.mat-mdc-button-base:focus-visible,
+a.mat-mdc-button-base:focus-visible,
+button.mat-mdc-menu-item:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
   outline: 2px solid var(--mat-sys-primary);
   outline-offset: 2px;
 }

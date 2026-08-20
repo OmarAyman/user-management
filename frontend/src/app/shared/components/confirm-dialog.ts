@@ -17,6 +17,10 @@ export interface ConfirmDialogData {
  * Material's dialog traps focus and restores it to the trigger on close, which is what makes this usable by
  * keyboard - the reason for a dialog rather than a `confirm()` call. The confirm button carries the specific
  * verb ("Delete") rather than "OK", so the consequence is legible without reading the body text.
+ *
+ * Focus lands on the dialog container rather than on the confirm button (`autoFocus: 'dialog'` at the call
+ * site). That is deliberate for a destructive confirmation: a screen reader reads the whole question, and a
+ * stray Enter does not activate Delete.
  */
 @Component({
   selector: 'app-confirm-dialog',
@@ -35,11 +39,12 @@ export interface ConfirmDialogData {
           {{ t('common.actions.cancel') }}
         </button>
 
+        <!-- No cdkFocusInitial: the container takes focus instead, so Enter cannot immediately confirm a
+             destructive action the user has not read yet. -->
         <button
           matButton="filled"
           type="button"
           [color]="data.destructive ? 'warn' : 'primary'"
-          cdkFocusInitial
           (click)="dialogRef.close(true)"
         >
           {{ t(data.confirmKey) }}
