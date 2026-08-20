@@ -21,11 +21,11 @@
       "close": "Close"
     },
     "states": {
-      "loading": "Loading…",
+      "loading": "Loading...",
       "emptyTitle": "Nothing to show",
       "emptyMessage": "No records match the current filters.",
       "errorTitle": "Something went wrong",
-      "saving": "Saving…"
+      "saving": "Saving..."
     },
     "fields": {
       "username": "Username",
@@ -64,7 +64,9 @@
       "title": "Sign in",
       "subtitle": "Use your account to continue",
       "submit": "Sign in",
-      "signingIn": "Signing in…"
+      "signingIn": "Signing in...",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
     }
   },
   "users": {
@@ -101,7 +103,7 @@
       "passwordHint": "At least 12 characters, with an uppercase letter, a lowercase letter and a digit.",
       "usernameTaken": "This username is already taken.",
       "emailTaken": "This email is already taken.",
-      "checking": "Checking…"
+      "checking": "Checking..."
     },
     "validation": {
       "required": "This field is required.",

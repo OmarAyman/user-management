@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -76,7 +76,7 @@ import { LocaleService } from '../../core/services/locale.service';
                 matIconButton
                 matSuffix
                 type="button"
-                [attr.aria-label]="passwordVisible() ? t('common.actions.close') : t('common.fields.password')"
+                [attr.aria-label]="passwordVisible() ? t('auth.login.hidePassword') : t('auth.login.showPassword')"
                 (click)="passwordVisible.set(!passwordVisible())"
               >
                 <mat-icon>{{ passwordVisible() ? 'visibility_off' : 'visibility' }}</mat-icon>
@@ -183,3 +183,4 @@ export class LoginPage {
     });
   }
 }
+

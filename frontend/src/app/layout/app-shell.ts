@@ -52,6 +52,26 @@ import { HasRoleDirective } from '../shared/directives/has-role.directive';
           >
         </nav>
 
+        <!--
+          The same destinations behind one button below 768px. Without this the toolbar is wider than a phone
+          viewport and the whole page scrolls sideways - which a responsive test caught.
+        -->
+        <button
+          matIconButton
+          class="shell-nav-toggle"
+          type="button"
+          [matMenuTriggerFor]="navMenu"
+          [attr.aria-label]="t('nav.menu')"
+        >
+          <mat-icon>menu</mat-icon>
+        </button>
+
+        <mat-menu #navMenu>
+          <a mat-menu-item routerLink="/users">{{ t('nav.users') }}</a>
+          <a mat-menu-item routerLink="/profile">{{ t('nav.profile') }}</a>
+          <a *appHasRole="adminRole" mat-menu-item routerLink="/audit">{{ t('nav.audit') }}</a>
+        </mat-menu>
+
         <span class="shell-spacer"></span>
 
         <button
@@ -131,10 +151,25 @@ import { HasRoleDirective } from '../shared/directives/has-role.directive';
       margin-inline: auto;
     }
 
-    /* The toolbar is the first thing to run out of room, so labels give way before the layout breaks. */
+    .shell-nav-toggle {
+      display: none;
+    }
+
+    /*
+      The toolbar is the first thing to run out of room. Below 768px the inline links collapse into a menu and
+      the username label is dropped, because the alternative is a page that scrolls sideways on a phone.
+    */
     @media (max-width: 767px) {
       .shell-content {
         padding: 1rem 0.75rem;
+      }
+
+      .shell-nav {
+        display: none;
+      }
+
+      .shell-nav-toggle {
+        display: inline-flex;
       }
 
       .shell-username {
@@ -143,6 +178,7 @@ import { HasRoleDirective } from '../shared/directives/has-role.directive';
 
       .shell-brand {
         font-size: 1rem;
+        margin-inline-end: 0;
       }
     }
   `,
