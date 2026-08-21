@@ -3,9 +3,18 @@
 A recording plan. Every claim below is something the running application actually does — no slides, no
 narration over a static screen.
 
-**Before you record:** start the API (`dotnet run --project src/UserManagement.Api --urls http://localhost:5080`)
-and the SPA (`npm start` in `frontend/`), and have Swagger open in a second tab. Sign out first, so the
-recording starts at the sign-in screen.
+**Before you record**, bring the application up. One command is enough:
+
+```bash
+docker compose up --build      # everything on http://localhost:4200
+```
+
+Or run it locally if you would rather show the dev server: `dotnet run --project src/UserManagement.Api --urls
+http://localhost:5080` and `npm start` in `frontend/`.
+
+Either way, have Swagger open in a second tab (`http://localhost:5080/swagger`) and sign out first, so the
+recording starts at the sign-in screen. If you have restarted the stack a few times while rehearsing, run
+`docker compose --profile test down -v` and `up` again for a clean 28-user list.
 
 **One deliberate deviation from the obvious running order:** soft delete comes *before* the audit trail. The
 reverse order is more natural to describe, but it means opening the audit screen before the deletion has
