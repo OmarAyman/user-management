@@ -98,6 +98,72 @@ describe('correlationIdInterceptor', () => {
     expect(second).toBeTruthy();
     expect(first).not.toBe(second);
   });
+
+  /**
+   * The regression that took the whole application down.
+   *
+   * `crypto.randomUUID` exists only in a secure context. Served over plain http from anything other than
+   * localhost it is undefined, so this interceptor threw on the first request out of the application - which is
+   * Transloco fetching its catalogue - and the result was a blank page reporting "Unable to load translation
+   * and all the fallback languages". Local development cannot reproduce it, because localhost is always a
+   * secure context; it appeared the first time the built SPA was served from a container hostname.
+   */
+  function withCrypto(replacement: Partial<Crypto> | undefined, assertions: () => void): void {
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+
+    try {
+      Object.defineProperty(globalThis, 'crypto', { value: replacement, configurable: true, writable: true });
+      assertions();
+    } finally {
+      if (original === undefined) {
+        delete (globalThis as unknown as Record<string, unknown>)['crypto'];
+      } else {
+        Object.defineProperty(globalThis, 'crypto', original);
+      }
+    }
+  }
+
+  function tagOf(): string | null {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptors([correlationIdInterceptor])),
+        provideHttpClientTesting(),
+      ],
+    });
+
+    TestBed.inject(HttpClient).get('/api/users').subscribe();
+
+    return TestBed.inject(HttpTestingController).expectOne('/api/users').request.headers.get('X-Correlation-Id');
+  }
+
+  const uuidV4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  it('still tags requests where randomUUID is unavailable, as on any non-secure origin', () => {
+    withCrypto({ getRandomValues: globalThis.crypto.getRandomValues.bind(globalThis.crypto) }, () => {
+      const tag = tagOf();
+
+      expect(tag).toMatch(uuidV4);
+    });
+  });
+
+  it('still tags requests where the whole Web Crypto API is missing', () => {
+    withCrypto(undefined, () => {
+      const tag = tagOf();
+
+      // Weak randomness is acceptable for a value whose only job is to identify a request in a log. An
+      // application that will not start is not.
+      expect(tag).toMatch(uuidV4);
+    });
+  });
+
+  it('produces distinct ids from the fallback path', () => {
+    withCrypto({ getRandomValues: globalThis.crypto.getRandomValues.bind(globalThis.crypto) }, () => {
+      const ids = new Set(Array.from({ length: 20 }, () => tagOf()));
+
+      expect(ids.size).toBe(20);
+    });
+  });
 });
 
 describe('acceptLanguageInterceptor', () => {
