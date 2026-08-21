@@ -70,6 +70,36 @@ test.describe('page assets and headers', () => {
     expect(measurements.withFallback).toBeGreaterThan(60);
   });
 
+  test('serves a deep link with the same security headers as the root', async ({ page }) => {
+    test.skip(process.env['E2E_EXPECT_PROD_HEADERS'] !== '1', 'nginx is only in front of the containerised stack');
+
+    // Every route below / is served by try_files rewriting to index.html, which does not re-enter the
+    // `= /index.html` location - so a policy set only there would leave /users, /profile and /audit
+    // unprotected while / looked correct.
+    const response = await page.goto('/users');
+    const headers = response?.headers() ?? {};
+
+    expect(headers['content-security-policy']).toContain("script-src 'self'");
+    expect(headers['x-frame-options']).toBe('DENY');
+  });
+
+  test('does not duplicate the document policy onto API responses', async ({ page }) => {
+    test.skip(process.env['E2E_EXPECT_PROD_HEADERS'] !== '1', 'nginx is only in front of the containerised stack');
+
+    await page.goto('/login');
+
+    const api = await page.request.get('/api/health', { failOnStatusCode: false });
+    const policies = api.headersArray().filter((h) => h.name.toLowerCase() === 'content-security-policy');
+
+    // The API sets its own default-src 'none', which is right for JSON. Two policies on one response are
+    // combined by intersection, and a duplicated X-Frame-Options is ignored outright by some browsers, so each
+    // surface carries exactly one set of headers.
+    expect(policies.length).toBeLessThanOrEqual(1);
+
+    const frameOptions = api.headersArray().filter((h) => h.name.toLowerCase() === 'x-frame-options');
+    expect(frameOptions.length).toBeLessThanOrEqual(1);
+  });
+
   test('serves the document with security headers', async ({ page }) => {
     // Only the containerised stack puts nginx in front; the dev server serves the same bundle without them, so
     // this is asserted where it is true rather than made true by weakening it.
