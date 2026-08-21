@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import {
   AbstractControl,
   AsyncValidatorFn,
@@ -64,6 +64,9 @@ export class UserFormPage {
   /** Held so it can be sent back on save: it is the proof of which version was edited. */
   private rowVersion = '';
 
+  /** The id already fetched, so the effect does not re-request on every unrelated signal change. */
+  private loadedId: string | undefined;
+
   protected readonly form = this.formBuilder.nonNullable.group({
     username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50), Validators.pattern(/^[a-zA-Z0-9._-]+$/)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(256)]],
@@ -85,11 +88,25 @@ export class UserFormPage {
     this.form.controls.email.addAsyncValidators(this.availabilityValidator('email'));
     this.form.controls.username.updateValueAndValidity({ emitEvent: false });
 
-    const id = this.id();
+    // Loading has to wait for the input to exist.
+    //
+    // `id` is a signal input bound from the route, and Angular assigns route-bound inputs *after* the component
+    // is constructed - so reading it here returns undefined however the URL looks. The original version did
+    // exactly that, so on /users/:id/edit the fetch never ran: the heading said "Edit user" (the template reads
+    // the signal later, once it is set) while every field stayed empty and the username stayed editable.
+    //
+    // An effect reads the input once it is there, and re-runs if the id changes while the component is reused -
+    // which ngOnInit would not.
+    effect(() => {
+      const id = this.id();
 
-    if (id !== undefined) {
+      if (id === undefined || id === this.loadedId) {
+        return;
+      }
+
+      this.loadedId = id;
       this.loadUser(id);
-    }
+    });
   }
 
   protected save(): void {
