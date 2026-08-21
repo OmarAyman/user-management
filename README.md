@@ -12,8 +12,35 @@ delete, an append-only audit trail, and English/Arabic localization with right-t
 
 ---
 
+## Demo
+
+A 4-minute screen recording accompanies this submission, covering every feature below in order. It is a
+**silent capture with on-screen captions**, so the reasoning behind each screen is written out here rather
+than narrated:
+
+| What the recording shows | The decision behind it |
+|---|---|
+| A refused sign-in | An unknown username, a wrong password and a soft-deleted account all return the same answer, and verification always runs against a dummy hash when the user does not exist - so neither the message nor the timing reveals whether an account exists |
+| Local storage holding one key | The access token lives in memory only; the refresh token is a separate httpOnly cookie that rotates on every use, and replaying a rotated token revokes the whole family |
+| Creating a user | Uniqueness is enforced by unique indexes filtered to active rows. The on-blur availability check is a courtesy; the database is the authority |
+| Editing a user | Username is disabled because it is immutable server-side - the form does not offer what the API would refuse. There is no password field: changing one is its own endpoint, callable only by the owner |
+| Two administrators, one user | The second save is refused with `409 RESOURCE_MODIFIED`. Without a `rowversion` the later write silently destroys the earlier one, and the audit trail would present both as deliberate |
+| Search, sort, empty state | List state lives in the URL, so a filtered view is shareable and the back button behaves |
+| Soft delete and restore | A global query filter excludes deleted rows by default, with one audited opt-out. Deleting twice answers `409`, not `404`: "already gone" is not "never existed" |
+| The audit trail | Written by an EF Core save-changes interceptor, so auditing is a property of persistence rather than something each caller must remember. Identity is the immutable user id, because usernames are released on soft delete and can be reused |
+| A read-only user, then a direct API call | The interface hides what the role cannot do; the API refuses it. The 403 is produced with a valid token for that role, so it demonstrates authorization rather than authentication |
+| Profile | The profile contract has no role field at all, so self-elevation is not declined by the UI - it cannot be expressed |
+| Arabic, right to left | Direction is set once on the document; Material reads it from there, so overlays, the paginator and the sort arrows mirror without per-component work. Validation and API error messages are localized too, while the machine-readable `errorCode` never is |
+| A structured error, and Swagger | RFC 7807 with a stable code, a localized message and a trace id that also appears in the logs. Sorting is a whitelist, so a client-supplied column name never reaches SQL |
+
+The recording is reproducible: `npm run demo:record --prefix frontend` regenerates it from
+[frontend/demo/walkthrough.spec.ts](frontend/demo/walkthrough.spec.ts), which asserts as it goes - so a run
+that completes is evidence the features worked rather than footage that happens to look right. Beat-by-beat
+timings are in [docs/14-demo-script.md](docs/14-demo-script.md).
+
 ## Contents
 
+- [Demo](#demo)
 - [Project overview](#project-overview)
 - [Architecture](#architecture)
 - [Technology stack](#technology-stack)
