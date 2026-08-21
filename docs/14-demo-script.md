@@ -14,7 +14,7 @@ http://localhost:5080` and `npm start` in `frontend/`.
 
 Either way, have Swagger open in a second tab (`http://localhost:5080/swagger`) and sign out first, so the
 recording starts at the sign-in screen. If you have restarted the stack a few times while rehearsing, run
-`docker compose --profile test down -v` and `up` again for a clean 28-user list.
+`docker compose --profile test down -v` and `up` again for a clean 27-user list.
 
 **A recorded visual track exists.** `npm run demo:record --prefix frontend` drives the application through
 every beat below and writes a 720p video to `frontend/demo-recording/`. It is silent by design: the value of
@@ -45,7 +45,7 @@ the viewer just watched happen, which is the whole point of that minute.
 
 ## 0:30–1:30 · Admin user management
 
-1. The list loads: 28 users, newest first, with role and status per row.
+1. The list loads: 27 users - three demo accounts and twenty-four samples - newest first, with role and status per row.
 2. **Create a user.** Click *Create user*, and while typing show:
    - the username hint (immutable after creation),
    - the password policy hint,
