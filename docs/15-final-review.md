@@ -8,16 +8,17 @@ well, which is how the storage-globals problem in section 6 came to light.
 
 ```text
 dotnet build                       0 warnings, 0 errors      (warnings-as-errors enabled)
-dotnet test                        109 unit + 153 integration passed
-npm test --prefix frontend         72 passed
-npm run e2e --prefix frontend      78 passed
+dotnet test                        114 unit + 153 integration passed
+npm test --prefix frontend         75 passed
+npm run e2e --prefix frontend      83 passed
 npm run lint --prefix frontend     0 problems
 npm run lint:verify --prefix frontend   9 lint-rule checks passed
 npm run lint:styles --prefix frontend   no physical direction properties
 newman run postman/...             42 requests, 66 assertions, 0 failures (run twice)
+docker compose up --build          three services healthy; all three suites also run in containers
 ```
 
-Total: **412 automated tests, all passing**, plus 66 Postman assertions and 9 lint-rule checks.
+Total: **425 automated tests, all passing**, plus 66 Postman assertions and 9 lint-rule checks.
 
 ---
 
@@ -28,7 +29,7 @@ The brief's 41-item gate, with what proves each line.
 | # | Item | Result | Evidence |
 |---|---|---|---|
 | 1 | Backend builds | Pass | `dotnet build`: 0 warnings, 0 errors, warnings-as-errors on |
-| 2 | Frontend builds | Pass | `npm run build`: bundle generated, 338 kB initial |
+| 2 | Frontend builds | Pass | `npm run build`: 355 kB initial (24 kB of it CSS, up from 9 kB now that the fonts are bundled rather than fetched from Google); also built and served from the `web` container |
 | 3 | Database migrations work | Pass | `dotnet ef database update` applied; `SchemaTests` asserts the resulting shape |
 | 4 | SQL scripts exist | Pass | `database/001_schema.sql` (generated), `002_seed.sql`, `003_sample_queries.sql` |
 | 5 | Seed data exists | Pass | 3 demo accounts + 24 sample users; verified by query and by `SchemaTests` |
@@ -61,9 +62,9 @@ The brief's 41-item gate, with what proves each line.
 | 32 | RTL works | Pass | `arabic-rtl.spec.ts`; `dir="rtl"`, Arabic headers, table intact |
 | 33 | Swagger works | Pass | UI returns 200; 13 paths; Bearer scheme present |
 | 34 | Postman collection exists | Pass | 8 folders, 42 requests, 66 assertions; run through newman twice with zero failures |
-| 35 | Unit tests pass | Pass | 109 |
+| 35 | Unit tests pass | Pass | 114 |
 | 36 | Integration tests pass | Pass | 153, against real SQL Server |
-| 37 | Angular tests pass | Pass | 72 Vitest + 78 Playwright |
+| 37 | Angular tests pass | Pass | 75 Vitest + 83 Playwright, the browser suite run against both the dev server and the containerised production build |
 | 38 | README complete | Pass | all 17 required sections |
 | 39 | No secrets committed | Pass | `git grep` for key patterns; only documented demo passwords and PBKDF2 hash literals |
 | 40 | Git history meaningful | Pass | one coherent slice per commit, each explaining *why*; no history rewritten during hardening |
@@ -128,7 +129,7 @@ claimed. `npm audit` was re-run afterwards: **0 vulnerabilities**. ESLint 9 was 
 it as no longer supported; it was replaced with 10.8.1 rather than left on an unsupported line.
 
 `dotnet list package --deprecated` flags **xunit 2.9.3** as legacy in favour of xunit.v3. Not a
-vulnerability and not addressed: migrating the test framework at the end of the project would risk 262 working
+vulnerability and not addressed: migrating the test framework at the end of the project would risk 267 working
 tests for no functional gain. Recorded as a known limitation instead.
 
 ### Residual risks
@@ -198,6 +199,55 @@ Nine of these eleven are the same species: **something true in the code but unen
 a document and absent from the code.** That is what a hardening pass is for. The two exceptions - the raw-key
 title and the focus ring - were behavioural defects a user would have met.
 
+### Then the whole thing was run in Docker
+
+The compose file shipped SQL Server and the API and said the SPA "is still run with npm". Containerising the
+rest, so a reviewer needs Docker and nothing else, turned up four more defects - including the most serious one
+in the project.
+
+| # | Found | Fix |
+|---|---|---|
+| 27 | **`crypto.randomUUID` is not available outside a secure context, and the correlation-id interceptor called it on every request.** Served over plain http from anything other than localhost - a container hostname, an IP address, an internal staging box - `randomUUID` is `undefined`, so the interceptor threw on the *first* request the application makes, which is Transloco fetching its translation catalogue. The result was a blank page and "Unable to load translation and all the fallback languages", with nothing pointing at an interceptor. The application was, in plain terms, dead anywhere but localhost and HTTPS. Local development structurally cannot reveal this, because localhost is a secure context by definition | Use `randomUUID` when it exists, otherwise build a v4 from `getRandomValues` - which is *not* secure-context gated - and fall back to `Math.random` as a last resort. A correlation id names a request in a log; it is not a secret, and a weak id beats an application that will not start. Three tests pin all three paths |
+| 28 | **The API image had never been built.** `RUN adduser` does not exist in the .NET 10 runtime image, so `docker compose up --build` failed on the first attempt anyone made. The traceability matrix carried the row as Verified. The `HEALTHCHECK` was equally untested: it used `wget`, also absent | The base image already provides a non-root `app` user as `$APP_UID`, so there is nothing to create. `curl` is installed for the health check rather than dropping the check - a container permanently reported unhealthy while actually serving teaches an operator to ignore health |
+| 29 | **The documented no-Docker test fallback shared one database between two fixtures.** `USERMANAGEMENT_TEST_SQL` was read independently by the API fixture and the persistence fixture, and xUnit runs their collections in parallel - so both migrated the same database and then interleaved writes across the same tables. On the Testcontainers path each fixture gets its own container, which is why this never showed. 122 of 153 tests died with "A severe error occurred on the current command", which reads like a broken SQL Server | One database per fixture, derived from whatever name is configured. The fallback is what a container run uses, so this had to be right before the suites could run in Docker at all |
+| 30 | **A browser test spent the shared admin account's lockout budget.** The wrong-password test signed in as `admin`; five failures inside fifteen minutes lock the account. One suite run is fine, so it passed for weeks. Against a long-lived containerised stack, repeated runs locked admin out and 37 tests went red at once with nothing in the failures naming the cause - the same species as the localization-test defect in item 10 | The test creates a throwaway account and locks that instead. The assertion is unchanged, because what it proves is the interface's behaviour on a refused sign-in |
+
+| 31 | **The SPA carried no security headers.** The API set a CSP, `X-Frame-Options`, `nosniff` and `Referrer-Policy` on its JSON - the one response that cannot execute script - while the document that can had none, and 08-security-plan named CSP as an XSS control. Serving the bundle from nginx made that visible: `curl -I` on the page returned nothing but `Server: nginx/1.29.8` | A CSP on the document with `script-src 'self'` and no exemption, plus the three other headers and `server_tokens off`. Repeated in each location that sets its own `add_header`, because nginx discards inherited headers there - a subtlety that silently drops them from exactly the cacheable responses |
+| 33 | **The second `docker compose up` against an existing volume crashed the API.** A SQL Server container answers `SELECT 1` - and so passes its health check - before it has finished bringing user databases online after a restart. EF Core asked whether the database existed, was told it did not, issued `CREATE DATABASE` and got error 1801: it already does. The process died on startup, so a reviewer who stopped and restarted the stack got a dead API where the first run had worked | `StartupRetry` makes the migration and the seeder retryable: five bounded attempts, logged at `Warning` because a dependency still starting is expected rather than wrong, and the process is still allowed to die if it never succeeds. A stronger health check was the alternative and is weaker in principle - it can only say the engine was ready a moment ago, and the same race exists for a managed database that fails over during startup. Five unit tests, with the delay injected so they do not spend fifteen seconds proving it. The failing sequence was reproduced, then re-run after the fix and came up healthy |
+| 32b | **The document policy would have been appended to API responses too.** Set on the nginx `server` block, `add_header` applies to every location that does not declare its own - so each proxied API response carried both its own `default-src 'none'` and the page's policy, and two `X-Frame-Options` headers. Browsers intersect multiple CSPs, and some ignore a duplicated `X-Frame-Options` outright | Headers moved to the locations that serve the document. The catch-all location needs its own copy, because `try_files` rewrites to index.html without re-entering the `= /index.html` location - miss that and every deep link is served with no policy while `/` looks protected. Two tests: one on a deep link, one asserting API responses carry at most one policy |
+| 32 | **Roboto and the Material icon font were fetched from Google.** On any network that cannot reach `fonts.gstatic.com` - a restricted corporate network, an air-gapped review, the e2e container - every icon rendered as its own ligature text: the toolbar read "visibility", "delete", "edit". Not a degraded interface, a broken one. It also forced two third-party origins into the CSP | Both fonts bundled through `@fontsource`, the Google links removed from `index.html`, and the `.mat-icon` font-family declared by hand - Google's stylesheet provided that class, and a bundled `@font-face` does not. Angular's `inlineCritical` optimization is off, because it rewrites the stylesheet link with an inline `onload` handler that a strict `script-src` blocks. The page now loads **zero** third-party resources, verified by a test that fails if any appear |
+
+Three of the suite's own assumptions had to be corrected along the way, and they are worth naming because each
+was hiding behind a green run. The keyboard-only sign-in test started tabbing as soon as `goto` resolved, which
+is the load event and not the point at which Angular has rendered a form - harmless while the stylesheet was
+small, a failure once bundled fonts moved first paint later, and it would have read as a broken sign-in rather
+than as a test racing the application. The third-party-request test compared each request against `page.url()`
+inside the handler, where the page is still on `about:blank`, so it counted the application's own document as
+external. And the icon test trusted `document.fonts.ready`, which can resolve before a lazily fetched face
+arrives; it now asks for the face explicitly. None of the three were retried into green.
+
+Item 27 is the strongest argument in this project for running software the way it will actually be run. Every
+suite was green, 412 tests including 78 in a real browser, and the application would not have started for
+anyone who deployed it to an internal host over http. Items 28 to 32 are all of the same family: each was
+invisible until the application was built, served and driven the way a deployment would.
+
+### Verified in containers
+
+```text
+docker compose up --build                                          three services healthy; sign-in on :4200
+docker compose --profile test run --rm --build backend-tests       114 unit + 153 integration passed
+docker compose --profile test run --rm --build frontend-tests      lint clean, 9 rule checks, 75 Vitest
+docker compose --profile e2e  run --rm --build e2e                 83 Playwright passed
+```
+
+`--build` is part of the command rather than a flourish: Compose builds a missing image and never rebuilds a
+stale one, so a run without it tests whatever the image was last built from. It reported 75 Vitest tests as 72
+once, which is how that got noticed.
+
+The SPA is served as a production bundle behind nginx with `/api` proxied through the same origin, so the
+httpOnly refresh cookie works without CORS credentials - the containerised stack exercises the same
+single-origin arrangement the dev-server proxy gives locally, rather than a different one.
+
 ### What was deliberately not changed
 
 - **No vulnerability was invented.** The security review found no new exploitable defect; the forwarded-header
@@ -224,6 +274,7 @@ them, the corrections are recorded:
 | 12-decision-log | Four ADRs added during implementation (0018-0020 plus the ADR-0009 reversal), each with the reasoning that produced it. |
 | 09-localization-plan | Two enforcement mechanisms were named that did not exist, and the localized page titles were not implemented at all. All three are now real; see section 5, items 18 and 22. |
 | 08-security-plan / README | The forwarded-header handling described in the threat model was not implemented. It is now, opt-in, with tests (section 5, item 23). |
+| 12-decision-log | ADR-0012 described a Docker path that had been written and never executed - the API image did not build. The ADR now carries its revision: the SPA and all three suites are containerised too, and the reason that mattered is item 27, a defect only visible when the application runs somewhere other than localhost. |
 
 ## 7. What a reviewer should look at first
 
@@ -236,7 +287,7 @@ If time is short, these five files carry most of the reasoning:
    cannot be forgotten.
 4. `frontend/src/app/app.config.ts` - the interceptor ordering rule and the defect behind it.
 5. `docs/12-decision-log.md` - 20 decisions with their alternatives and costs, including the one that was
-   reversed.
+   reversed (ADR-0009) and the one that was revised because running it proved it wrong (ADR-0012).
 
 
 

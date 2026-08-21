@@ -127,8 +127,12 @@ These go to Serilog with a stable event name, never to `AuditLogs`, because they
 | `RoleChanged` | actor, target, old role, new role, IP — logged **in addition** to the `RoleChange` audit row, so a log-only reader still sees privilege movement |
 | `UserDeleted`, `UserRestored` | actor, target, IP |
 
-No event in this table carries a password, a hash or a token. Enforced by a Serilog destructuring policy
-plus the test in section 7.
+No event in this table carries a password, a hash or a token. What enforces that is the test in section 7,
+not a Serilog destructuring policy - an earlier version of this document claimed one, and it did not exist.
+`SensitiveDataLoggingTests` drives four sign-in outcomes and a password change through a capturing logger and
+asserts that the password, the stored hash, the access token and the refresh token appear in neither the
+rendered message nor any structured value. Structured values matter separately: a credential can leak through
+a template parameter that never reaches a console line but does reach a JSON sink.
 
 ## 7. Enforcing tests
 

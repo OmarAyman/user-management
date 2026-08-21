@@ -328,6 +328,25 @@ since a reviewer evaluating an Angular app will want the dev server anyway.
 Cost: the Compose file is a maintained artifact, and the Phase 9 verification step includes a clean
 `docker compose up` from a fresh clone.
 
+**Revised in phase 10, and the revision is the interesting part.** The decision above was recorded, documented
+and never executed: `docker compose up --build` failed on the API image's first line, because `adduser` does
+not exist in the .NET 10 runtime image. A decision that has not been run is a hypothesis.
+
+Running it changed the decision twice over:
+
+- **The SPA is containerised too**, served as a production bundle behind nginx with `/api` proxied through the
+  same origin. The original reasoning - "a reviewer evaluating an Angular app wants the dev server" - is true
+  and beside the point: someone who does not want to install the SDK does not want to install Node either. The
+  dev server remains fully documented for anyone working on the code.
+- **The suites run in containers as well**, behind Compose profiles: both backend suites, the frontend suite,
+  and the browser suite against the built bundle.
+
+The second change is what earned its keep. Serving the built SPA from a container hostname over plain http -
+rather than from localhost, which is a secure context - exposed a defect that made the application unusable
+anywhere but localhost and HTTPS (`crypto.randomUUID`, phase 10 review item 27). Every suite had been green.
+The cost of the original arrangement was not the maintained Compose file; it was never seeing the application
+run the way it would actually be deployed.
+
 ---
 
 ## ADR-0013 — Optimistic concurrency on `User` via a SQL Server `rowversion`
@@ -383,7 +402,7 @@ the tests, so the document and the code cannot disagree without a test failing.
 
 ---
 
-## ADR-0015 — A five-scenario Playwright smoke suite, and nothing more
+## ADR-0015 — A Playwright browser suite, capped and guardrailed
 
 **Status:** accepted (Phase 1 review addition; reverses the original "no end-to-end tests" limitation)
 
@@ -403,6 +422,22 @@ rule that a failing smoke test is fixed or deleted — never retried into green.
 recorded here rather than left half-built. Backend integration tests plus component tests already cover the
 same behaviour; the smoke suite exists to prove the pieces meet in a browser, which is genuinely something
 neither layer can prove.
+
+**Extended in phase 10, to 83 tests over eight specs.** The five-spec cap was the right constraint against a
+suite that duplicates cheaper layers, and it was the wrong constraint against two requirements the matrix was
+honestly carrying as `Partial`: accessibility and responsive layout. Both are questions only a browser can
+answer, and neither can be answered by five scenarios - so the additions are 27 accessibility tests (16 axe
+scans in both directions, plus keyboard, focus and live-region behaviour axe cannot see), 36 responsive tests
+across four viewports, and five that check what the page loads and what headers it is served with.
+
+The guardrails are unchanged and still binding: one browser, no snapshots, no page-object layer, data seeded
+through the API, no retries. Two were added, both after the suite found defects in itself:
+
+- **No test spends a shared account's lockout budget.** The wrong-password test locks a throwaway account,
+  because locking `admin` takes 37 other tests down on the fifth run inside fifteen minutes.
+- **The suite runs against the containerised production build as well as the dev server.** The dev server is
+  always on localhost, localhost is always a secure context, and that difference concealed a defect that made
+  the application unusable on any other origin.
 
 ---
 

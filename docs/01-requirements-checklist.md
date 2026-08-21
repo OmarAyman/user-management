@@ -7,10 +7,13 @@ it — never from inspection. The evidence for each area is summarised in
 [15-final-review.md](15-final-review.md); the run behind it was:
 
 ```text
-dotnet build                    0 warnings, 0 errors
-dotnet test                     99 unit + 145 integration passed
-npm test --prefix frontend      55 passed
-npm run e2e --prefix frontend   14 passed
+dotnet build                       0 warnings, 0 errors
+dotnet test                        114 unit + 153 integration passed
+npm test --prefix frontend         75 passed
+npm run e2e --prefix frontend      83 passed
+npm run lint --prefix frontend     0 problems, and 9 rule checks proving the rules fire
+newman run postman/...             42 requests, 66 assertions, 0 failures
+docker compose up --build          the whole stack; all three suites also run in containers
 ```
 
 Both rows that were previously `Partial` - accessibility and responsive layout - were closed during the
@@ -24,6 +27,12 @@ as missing rather than quietly dropped from the matrix.
 
 The hardening pass also added: forwarded-header handling (opt-in, with tests), an audit-policy conformance
 test, error-response disclosure tests, and log-redaction tests. Those rows carry phase 10.
+
+Two rows changed meaning rather than status once the stack was actually run in Docker. J-06 was verified against
+a Dockerfile that had never been executed and did not build. J-04 now includes the defect that mattered most in
+the whole project: the SPA called `crypto.randomUUID` on every request, which exists only in a secure context,
+so the application was dead on any plain-HTTP origin that is not localhost - and local development could not
+show it.
 
 ## A. Architecture and code organisation
 
@@ -175,15 +184,15 @@ test, error-response disclosure tests, and log-redaction tests. Those rows carry
 | J-01 | 34 | Unit tests for the listed behaviours | `tests/UserManagement.UnitTests` (xUnit + NSubstitute) | 8 | Verified |
 | J-02 | 34 | Integration tests for the listed API flows | `tests/UserManagement.IntegrationTests` (`WebApplicationFactory` + Testcontainers SQL Server) | 8 | Verified |
 | J-03 | 34 | Prove Admin can mutate, User and ReadOnlyUser cannot | Parameterised authorization matrix test | 8 | Verified |
-| J-04 | 35 | Frontend tests for services, guards, interceptors, components, validation, role behaviour | Vitest + Angular testing utilities | 8 | Verified |
+| J-04 | 35 | Frontend tests for services, guards, interceptors, components, validation, role behaviour | 75 Vitest tests with the Angular testing utilities, including three that pin correlation-id generation outside a secure context - the defect that made the SPA unusable on any non-localhost HTTP origin | 8, 10 | Verified |
 | J-05 | 48 | Every listed edge case explicitly tested | Edge-case table in [10-testing-plan.md](10-testing-plan.md) | 8 | Verified |
-| J-06 | 42 | Dockerfile + docker-compose for API and SQL Server | `Dockerfile`, `docker-compose.yml`, documented | 9 | Verified |
+| J-06 | 42 | Dockerfile + docker-compose for API and SQL Server | `docker compose up --build` runs SQL Server, the API and the SPA behind nginx on `:4200`; three more services run the backend suites, the frontend suite and the browser suite in containers. The API image **never built** until phase 10 - `adduser` does not exist in the .NET 10 runtime image - so this row was previously verified against a Dockerfile nobody had executed | 9, 10 | Verified |
 | J-07 | 43 | Professional README with the 17 required sections | Root `README.md` rewritten in Phase 9 | 9 | Verified |
 | J-08 | 44 | Meaningful, incremental git history | Commit plan in [11-implementation-plan.md](11-implementation-plan.md) | 2-10 | Verified |
 | J-09 | 52 | Final traceability matrix, nothing claimed without verification | This file, completed in Phase 10 | 10 | Verified |
 | J-10 | 55 | 41-item final quality gate all green | Gate checklist executed in Phase 10 | 10 | Verified |
 | J-11 | 59 | 5-minute demo script | `docs/14-demo-script.md` | 9 | Verified |
-| J-12 | added | Browser coverage | 78 Playwright tests over seven specs, Chromium only (ADR-0015): 15 smoke, 27 accessibility, 36 responsive | 8, 10 | Verified |
+| J-12 | added | Browser coverage | 83 Playwright tests over eight specs, Chromium only (ADR-0015): 15 smoke, 27 accessibility, 36 responsive, 5 asset/header. Run against both the dev server and the containerised production build - the difference between the two is what exposed the secure-context defect | 8, 10 | Verified |
 | J-13 | added | Concurrency, audit-redaction, soft-delete-authorization and refresh-rotation tests | Named in [10-testing-plan.md](10-testing-plan.md) | 8 | Verified |
 | J-14 | added | Frontend boundaries enforced, not merely documented | `import-x/no-restricted-paths` for all four boundary rules, plus bans on `bypassSecurityTrust*` and stray `localStorage` writes; `npm run lint:verify` lints nine deliberate violations to prove the rules fire | 10 | Verified |
 | J-15 | 59 | **Demo recording** | Not produced. [14-demo-script.md](14-demo-script.md) is a shot-by-shot script with timings for the five minutes, and every screen and behaviour it calls for is present in the running application - but recording it is a human act, and no video is included in this repository | 9 | **Not Implemented** |
@@ -197,7 +206,7 @@ Each is small, justified, and recorded as an ADR so a reviewer sees intent rathe
 | Refresh-token rotation with httpOnly cookie, organised into token families | Keeps the access token out of web storage while surviving page reload; families make reuse detection revoke one lineage rather than every session | ADR-0005 |
 | Optimistic concurrency (`rowversion`) | Two Admins editing one user is routine; without it the second save silently destroys the first and the audit trail lies about it | ADR-0013 |
 | Written audit policy | Makes "what is audited and what is never stored" reviewable without reading the interceptor | ADR-0014 |
-| Playwright browser suite | Proves the SPA and API meet in a browser — the one thing neither component nor API tests can show. Grew from five smoke specs to 78 tests once accessibility and responsive layout needed real evidence rather than a claim | ADR-0015 |
+| Playwright browser suite | Proves the SPA and API meet in a browser — the one thing neither component nor API tests can show. Grew from five smoke specs to 83 tests once accessibility, responsive layout and third-party asset loading needed real evidence rather than a claim | ADR-0015 |
 | Frontend architecture lint rules, with a script that proves they fire | The four boundaries were documented as enforced and were not. A clean lint run is ambiguous - on the first run every rule was silently inert for want of a TypeScript-aware resolver | ADR-0002 |
 | Availability endpoint for async form validation | Removes end-of-form uniqueness surprises without a request per keystroke | ADR-0016 |
 | Account lockout + auth rate limiting | Assignment section 49 invites account-security rules; covers OWASP A07 | ADR-0006 |

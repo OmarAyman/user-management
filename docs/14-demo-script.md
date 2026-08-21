@@ -115,14 +115,22 @@ the viewer just watched happen, which is the whole point of that minute.
 
 ## If you have thirty seconds more
 
-Run the two commands and let the counts speak:
+Run the suites and let the counts speak - or, if the machine has Docker and nothing else,
+`docker compose up --build` and the whole thing runs in containers:
 
 ```bash
-dotnet test          # 94 unit + 145 integration, against real SQL Server
-npm test --prefix frontend
+dotnet test                     # 114 unit + 153 integration, against real SQL Server
+npm test --prefix frontend      # 75
+npm run e2e --prefix frontend   # 83, in a real browser
 ```
 
-Then mention one defect the tests caught, because that is more convincing than a green count: the frontend's
-HTTP interceptors were registered in the intuitive order, which — because Angular processes responses in
-reverse — meant the token-refresh interceptor saw the raw error before the mapper and tried to refresh after a
-genuinely wrong password. A test found it; the ordering is now a documented rule.
+Then mention a defect the tests caught, because that is more convincing than a green count. Two worth having
+ready:
+
+- The HTTP interceptors were registered in the intuitive order, which - because Angular processes responses in
+  reverse - meant the token-refresh interceptor saw the raw error before the mapper and tried to refresh after
+  a genuinely wrong password. A test found it; the ordering is now a documented rule.
+- Every suite was green while the application was, in fact, dead anywhere except localhost:
+  `crypto.randomUUID` exists only in a secure context, and it was called on every request. Serving the built
+  SPA from a container over plain http is what surfaced it. That is the argument for running software the way
+  it will actually be run.

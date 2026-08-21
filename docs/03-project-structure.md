@@ -11,7 +11,10 @@ user-management/
 ├── .editorconfig                   formatting + analyzer severities
 ├── .gitattributes  .gitignore
 ├── README.md
-├── docker-compose.yml              api + mssql (+ web)
+├── docker-compose.yml              mssql + api + web, plus test and e2e profiles
+├── .dockerignore                   keeps host bin/, obj/ and node_modules out of every build context
+├── .env.example                    copy to .env; sa password and JWT key, both required by compose
+├── certs/                          optional corporate root CAs for image builds (contents gitignored)
 ├── database/
 │   ├── 001_schema.sql              GENERATED from the migrations - never hand-edited
 │   ├── 002_seed.sql                three demo users (precomputed PBKDF2 hashes only, no plaintext)
@@ -27,6 +30,7 @@ user-management/
 │   ├── UserManagement.Domain/
 │   └── UserManagement.Infrastructure/
 ├── tests/
+│   ├── Dockerfile                  runs both backend suites in a container, no SDK on the host
 │   ├── UserManagement.UnitTests/
 │   └── UserManagement.IntegrationTests/
 └── frontend/                       Angular 21 workspace
@@ -211,6 +215,10 @@ UserManagement.IntegrationTests/
 frontend/
 ├── .nvmrc                          "24" - Node 24 LTS is required, not suggested (ADR-0017)
 ├── angular.json  package.json  tsconfig*.json
+│                                   angular.json bundles Roboto and the Material icon font from @fontsource,
+│                                   and turns off inlineCritical so no inline onload handler is emitted
+├── Dockerfile                      four targets: deps, build, web (nginx), unit, e2e
+├── nginx.conf                      serves the bundle and proxies /api, so the SPA and API share one origin
 ├── eslint.config.js                boundary rules, sanitizer ban, template accessibility + i18n
 ├── vitest.config.ts                caps the worker pool; see README for why
 ├── playwright.config.ts            Chromium only
@@ -222,12 +230,13 @@ frontend/
 │   ├── user-list-query.spec.ts     readonly-cannot-mutate.spec.ts
 │   ├── arabic-rtl.spec.ts          helpers.ts
 │   ├── accessibility.spec.ts       axe scans + keyboard/focus/live-region behaviour
-│   └── responsive.spec.ts          four viewports, both directions
+│   ├── responsive.spec.ts          four viewports, both directions
+│   └── assets.spec.ts              no third-party requests, icon glyphs, security headers
 ├── public/i18n/en.json, ar.json    runtime translation catalogues (Transloco)
 └── src/
     ├── main.ts                     bootstrapApplication + provideZonelessChangeDetection
     ├── index.html                  static shell; its <title> is pre-boot, hence exempt from the i18n rule
-    ├── styles.scss                 Material theme tokens, focus ring, RTL-safe base styles
+    ├── styles.scss                 Material theme tokens, focus ring, icon font family, RTL-safe base styles
     ├── test-setup.ts               guarantees working browser storage whatever Node version runs the specs
     ├── test-setup.spec.ts          and proves both of its branches
     └── app/

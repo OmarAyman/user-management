@@ -9,12 +9,15 @@ Three layers, each answering a different question, with no attempt to hit a cove
 | Domain + Application unit tests | Do the rules hold in isolation? | xUnit, NSubstitute, FluentAssertions, AutoFixture-free explicit builders | milliseconds, no I/O |
 | API integration tests | Does the whole stack behave over HTTP, against a real database? | `WebApplicationFactory`, Testcontainers SQL Server 2022, Respawn | seconds per class |
 | Frontend tests | Do services, guards, interceptors and components behave? | Vitest + Angular testing utilities, `HttpTestingController` | milliseconds |
-| Browser smoke tests | Do the SPA and the API actually meet? | Playwright, Chromium, five specs (section 4b) | tens of seconds |
+| Browser tests | Do the SPA and the API actually meet, is the interface accessible, does it hold together at four widths? | Playwright, Chromium, axe-core; seven specs (section 4b) | minutes |
 
 The database in integration tests is **real SQL Server in Docker**, not the in-memory provider. Global query
 filters, `LIKE` translation, `OFFSET/FETCH`, unique-index violations and `datetimeoffset` behaviour are
 exactly the things the in-memory provider gets wrong, and they are exactly what needs proving here. Fallback
-for a machine without Docker: a configurable connection string pointing at LocalDB, documented in the README.
+for a machine without Docker: a configurable connection string in `USERMANAGEMENT_TEST_SQL`, documented in the
+README. That fallback gives **each fixture its own database** - the API fixture and the persistence fixture run
+in parallel collections, and pointing both at one database made 122 of 153 tests fail with what looked like a
+broken SQL Server. On the Testcontainers path the separation is free, because each fixture owns a container.
 
 ## 2. Unit tests
 
@@ -187,23 +190,31 @@ all three    PUT    /api/users/me         -> 200
 | i18n catalogues | `en.json` and `ar.json` have identical key sets |
 | `ConfirmDialog` | returns true only on confirm; focus is trapped and restored to the trigger on close |
 
-## 4b. Playwright smoke suite — five specs, deliberately
+## 4b. Playwright suite — 83 tests over eight specs
 
-Not an end-to-end framework: five specs proving the pieces meet in a real browser, which neither component
-tests (mocked HTTP) nor API tests (no browser) can prove. Scope and guardrails are fixed by ADR-0015.
+Not an end-to-end framework. Every test here answers a question no cheaper layer can: component tests mock
+HTTP, API tests have no browser, and neither can measure a focus ring or a horizontal overflow. Scope and
+guardrails are fixed by ADR-0015.
 
-| Spec | Proves |
-|---|---|
-| `admin-login.spec.ts` | Admin signs in, lands on the user list, the shell shows their name and role |
-| `admin-creates-user.spec.ts` | Create form validates, submits, and the new user appears in the list |
-| `user-list-query.spec.ts` | Search, role filter, column sort and page navigation each change the URL and the rendered rows |
-| `readonly-cannot-mutate.spec.ts` | `ReadOnlyUser` sees no create/edit/delete controls, and a direct API call from the page context returns `403` |
-| `arabic-rtl.spec.ts` | Switching to Arabic sets `dir="rtl"`, translates the shell, and the table still lays out correctly |
+| Spec | Tests | Proves |
+|---|---|---|
+| `admin-login.spec.ts` | 3 | Admin signs in and lands on the user list; a refused sign-in appears inline; the session survives a reload |
+| `admin-creates-user.spec.ts` | 3 | Create form validates, submits, and the new user appears in the list |
+| `user-list-query.spec.ts` | 3 | Search, role filter, column sort and page navigation each change the URL and the rendered rows |
+| `readonly-cannot-mutate.spec.ts` | 2 | `ReadOnlyUser` sees no create/edit/delete controls, and a direct API call from the page context returns `403` |
+| `arabic-rtl.spec.ts` | 4 | Arabic sets `dir="rtl"`, translates the shell and the tab title, survives a reload, and the table still lays out |
+| `accessibility.spec.ts` | 27 | 16 page states scanned with axe-core in both directions, plus keyboard, focus, live-region and table-semantics behaviour axe cannot check ([16-accessibility-audit.md](16-accessibility-audit.md)) |
+| `responsive.spec.ts` | 36 | Four viewports from 375x812 to 1440x900: no page overflow, nothing outside the viewport, navigation reachable, table scrolling in its own container, forms submittable, dialogs contained, Arabic intact |
+| `assets.spec.ts` | 5 | The page loads nothing from a third-party origin; Material icons render as glyphs rather than as the words "visibility" and "delete"; and - behind nginx only - the root, a deep link, and API responses each carry exactly the headers they should, with no duplicated policy |
 
 Guardrails: Chromium only, no visual snapshots, no page-object layer beyond a login helper, test data seeded
-through the API rather than clicked in, and a failing smoke spec is fixed or deleted — never retried into
-green. If wiring it against the API and the refresh cookie exceeds roughly an hour, it is dropped and the
-outcome recorded in ADR-0015 rather than left half-built.
+through the API rather than clicked in, and a failing spec is fixed or deleted — never retried into green.
+
+Two rules learned the hard way, both from defects this suite found in itself. **No test may spend a shared
+account's lockout budget** - the wrong-password test locks a throwaway account, because locking `admin` breaks
+37 other tests on the fifth run inside fifteen minutes. And **the suite runs against the containerised
+production build as well as the dev server**, because the dev server is always on localhost, localhost is
+always a secure context, and the difference hid a defect that made the application unusable anywhere else.
 
 ## 5. Edge cases from the assignment, mapped to tests
 
@@ -231,19 +242,36 @@ outcome recorded in ADR-0015 rather than left half-built.
 ## 6. Commands
 
 ```bash
-dotnet test                                            # 109 unit + 153 integration
+dotnet test                                            # 114 unit + 153 integration
 dotnet test tests/UserManagement.UnitTests             # fast loop, no Docker needed
 dotnet test --collect:"XPlat Code Coverage"            # coverage for the report
-npm test --prefix frontend                             # 72 Vitest tests, watch off in CI
+npm test --prefix frontend                             # 75 Vitest tests, watch off in CI
 npm run lint --prefix frontend                         # ESLint: boundaries, sanitizer ban, template a11y + i18n
 npm run lint:verify --prefix frontend                  # proves each of those rules actually fires
 npm run lint:styles --prefix frontend                  # no physical left/right in any stylesheet
-npm run e2e --prefix frontend                          # 78 Playwright tests, Chromium, API + SPA must be up
+npm run e2e --prefix frontend                          # 83 Playwright tests, Chromium, API + SPA must be up
 ```
+
+Or entirely in containers, with no SDK, Node or SQL Server installed:
+
+```bash
+docker compose --profile test run --rm --build backend-tests     # 114 unit + 153 integration
+docker compose --profile test run --rm --build frontend-tests    # lint, rule checks, 75 Vitest tests
+docker compose --profile e2e  run --rm --build e2e               # 83 Playwright tests against the built SPA
+```
+
+`--build` matters: Compose builds a missing image but never rebuilds a stale one, so omitting it silently runs
+the previous commit's code.
+
+The container path is not a convenience wrapper around the same run. `backend-tests` uses the
+`USERMANAGEMENT_TEST_SQL` fallback against a second SQL Server service rather than Testcontainers, so the
+Docker socket stays out of the test container - and the browser suite runs against the **production** bundle
+behind nginx rather than the dev server, which is how it caught a defect that only appears outside a secure
+context (see [15-final-review.md](15-final-review.md) section 5).
 
 ## 7. What is not tested, and why
 
-- **No deep end-to-end suite.** The browser suite grew during hardening from five smoke specs to 77 tests, but
+- **No deep end-to-end suite.** The browser suite grew during hardening from five smoke specs to 83 tests, but
   the added weight is all in accessibility (27) and responsive layout (36) - two things only a real browser can
   answer. Behaviour stays where it is cheaper and steadier: component tests over a mocked HTTP layer, and
   integration tests against real SQL Server. Deep flows (every validation message, every error state, every role

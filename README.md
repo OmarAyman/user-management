@@ -6,8 +6,8 @@ delete, an append-only audit trail, and English/Arabic localization with right-t
 
 | | |
 |---|---|
-| **Backend tests** | 109 unit, 153 integration (real SQL Server via Testcontainers) |
-| **Frontend tests** | 72 unit/component (Vitest), 78 browser tests (Playwright: 15 smoke, 27 accessibility, 36 responsive) |
+| **Backend tests** | 114 unit, 153 integration (real SQL Server via Testcontainers) |
+| **Frontend tests** | 75 unit/component (Vitest), 83 browser tests (Playwright: 15 smoke, 27 accessibility, 36 responsive, 5 assets/headers) |
 | **Build** | zero warnings, warnings-as-errors on; `eslint .` clean, with the boundary rules proven to fire |
 
 ---
@@ -95,7 +95,7 @@ pipeline would otherwise exist for ([ADR-0003](docs/12-decision-log.md)).
 | Security | `PasswordHasher<T>` (PBKDF2-HMAC-SHA512), JWT bearer, rotating opaque refresh tokens |
 | Validation | FluentValidation at the transport boundary |
 | Logging | Serilog - console plus a rolling JSON file |
-| Frontend | Angular 21 standalone + zoneless, Angular Material 21, Transloco, typed Reactive Forms |
+| Frontend | Angular 21 standalone + zoneless, Angular Material 21, Transloco, typed Reactive Forms, self-hosted Roboto and Material icon fonts |
 | Tests | xUnit, NSubstitute, Testcontainers, Vitest, Angular testing utilities, Playwright |
 
 ## Prerequisites
@@ -105,7 +105,7 @@ pipeline would otherwise exist for ([ADR-0003](docs/12-decision-log.md)).
 | .NET SDK | **10.0** | `dotnet --version` |
 | Node.js | **24 LTS** | Pinned by `frontend/.nvmrc` and by `engines`. Angular 21 supports `^20.19 \|\| ^22.12 \|\| ^24`, so npm warns `EBADENGINE` on an odd-numbered release such as 25. Everything still builds, lints and tests there - `src/test-setup.ts` exists so the specs do not depend on which Node version supplies the browser storage globals - but 24 is the supported version |
 | SQL Server | 2019+ | Local instance, LocalDB, or the Docker Compose service |
-| Docker | any recent | Only for Compose and for the integration tests' database |
+| Docker | any recent | Enough on its own: [Compose](#docker) runs the application and all three test suites, so the SDK, Node and SQL Server above are only needed to work on the code |
 
 Nothing else is required. If you would rather not install the SDK or a database, use [Docker](#docker).
 
@@ -219,16 +219,16 @@ which is what lets the httpOnly refresh cookie work in development without CORS 
 ## Running the tests
 
 ```bash
-# Backend: 109 unit + 153 integration
+# Backend: 114 unit + 153 integration
 dotnet test
 
 # Fast loop, no Docker required
 dotnet test tests/UserManagement.UnitTests
 
-# Frontend: 72 unit and component tests
+# Frontend: 75 unit and component tests
 npm test --prefix frontend
 
-# Browser suite, 78 tests: needs the API and the SPA running
+# Browser suite, 83 tests: needs the API and the SPA running
 npm run e2e --prefix frontend
 
 # Lint, and a check that the architectural lint rules actually fire
@@ -262,6 +262,9 @@ one.
   the specs rather than at the runtime. The setup file uses the environment's storage when it works and
   substitutes a real in-memory `Storage` when it does not, so the suite passes on 24 and on 25 alike. Both
   branches are tested (`src/test-setup.spec.ts`).
+
+Every suite also runs in a container, which needs no SDK, no Node and no local SQL Server - see
+[Docker](#docker).
 
 **The browser suite needs both servers up**, and Chromium installed once:
 
@@ -361,19 +364,71 @@ English and Arabic, on both sides, with right-to-left support.
 
 ## Docker
 
-For a reviewer who would rather not install the .NET SDK or SQL Server:
+Everything runs in containers: the application, both backend suites, the frontend suite and the browser suite.
+Docker is the only prerequisite - no .NET SDK, no Node, no local SQL Server.
 
 ```bash
 cp .env.example .env      # then set MSSQL_SA_PASSWORD and JWT_KEY
 docker compose up --build
 ```
 
-This starts SQL Server 2022 and the API on `http://localhost:5080`, applies migrations and seeds the demo
-accounts. The API waits for the database's health check, so migrations do not race the engine's startup on a
-cold volume. The container runs as a non-root user and has no default signing key - the startup guard refuses
-to boot in Production without one, which is the behaviour you want from a carelessly configured deployment.
+That starts three services and leaves the whole application on **http://localhost:4200**:
 
-The SPA is still run with `npm start`: someone evaluating an Angular application wants the dev server.
+| Service | What it is |
+|---|---|
+| `mssql` | SQL Server 2022. The API waits for its health check, so migrations cannot race the engine on a cold volume |
+| `api` | The API on `:5080`, applying migrations and seeding the demo accounts on first start |
+| `web` | The production Angular bundle behind nginx on `:4200`, with `/api` proxied to the API |
+
+The SPA and the API share one origin through the nginx proxy, which is what lets the httpOnly refresh cookie
+work with no CORS negotiation and no `SameSite` exemption - the same arrangement the dev-server proxy gives
+locally. Sign in at `http://localhost:4200` with the [demo credentials](#demo-credentials).
+
+The API container runs as the base image's non-root `app` user and has no default signing key: the startup
+guard refuses to boot in Production without one, which is the behaviour you want from a carelessly configured
+deployment.
+
+nginx serves the document with a real `Content-Security-Policy` (`script-src 'self'`, `frame-ancestors 'none'`,
+no third-party origin), plus `X-Content-Type-Options`, `X-Frame-Options` and `Referrer-Policy`. Until phase 10
+the only CSP in the project was the API's, which covers JSON - the one response that cannot execute script.
+The policy needs no font exemption because **Roboto and the Material icon font are bundled**: on a network that
+cannot reach `fonts.gstatic.com`, every icon used to render as its own ligature text, so the toolbar read
+"visibility", "delete", "edit". The page now loads nothing from a third-party origin, and a test fails if that
+changes.
+
+### The suites, in containers
+
+```bash
+docker compose --profile test run --rm --build backend-tests     # 114 unit + 153 integration
+docker compose --profile test run --rm --build frontend-tests    # lint, rule checks, 75 Vitest tests
+docker compose --profile e2e  run --rm --build e2e               # 83 Playwright tests
+```
+
+Nothing in the `test` or `e2e` profile starts during `docker compose up`.
+
+`--build` is not decoration. Compose builds a missing image but will not rebuild a stale one, so without it a
+run after any code change tests the previous commit - which is how a frontend run here reported 72 tests
+while the working tree had 75.
+
+`backend-tests` brings up a **second** SQL Server (`mssql-test`) and points the integration fixture at it
+through `USERMANAGEMENT_TEST_SQL`, so a test run cannot touch the data you are clicking through, and
+Testcontainers never needs the Docker socket. `e2e` runs the Playwright image against the `web` container -
+the stack must already be up.
+
+Tear down with `docker compose down`, or `docker compose --profile test down -v` to discard both databases.
+Stopping and starting again is safe: the API retries its startup migration, because a SQL Server container
+answers its health check before it has finished bringing user databases online, and the first version of this
+setup died on exactly that race the second time it was started.
+
+### Behind a TLS-inspecting proxy
+
+If your network runs one (Zscaler, Netskope and similar), image builds fail on `dotnet restore` or `npm ci`
+with *the remote certificate is invalid because of errors in the certificate chain*. The host works because
+the corporate root CA is in its trust store; a container has no such thing.
+
+Drop the CA as a PEM `.crt` into `certs/` and rebuild - every stage that reaches the network trusts that folder
+before it installs anything. `certs/.gitkeep` carries the one-liner for exporting it on Windows. The folder's
+contents are gitignored: a CA belongs to a network, not to this repository.
 
 ## Postman
 
@@ -490,10 +545,19 @@ Stated rather than hidden.
    the application's principal needs `INSERT` and `SELECT` on `AuditLogs` and nothing more.
 7. **Restoring a deleted user can fail** if their username or email was taken while they were deleted. That is
    the deliberate consequence of releasing identifiers on deletion, and it returns a clear `409`.
-8. **Browser coverage is five smoke specs, not an end-to-end suite.** Deep behaviour lives in the component
-   and API tests, where it does not flake.
+8. **Browser coverage is 83 tests, not an exhaustive end-to-end suite.** The weight is in accessibility and
+   responsive layout - things only a browser can answer. Deep behaviour lives in the component and API tests,
+   where it does not flake.
 9. **Arabic copy is authored, not professionally reviewed.** A native-speaker pass would be the next step.
-10. **The SPA is not containerised.** Only the API and the database are; someone reviewing an Angular
-    application wants the dev server.
+10. **Screen-reader narration and 400% browser zoom are not tested.** Every automated accessibility check
+    passes and the untested areas are listed in [docs/16-accessibility-audit.md](docs/16-accessibility-audit.md)
+    section 5, but "no axe violations" is not "accessible".
+11. **The containerised stack serves plain http.** Real deployment terminates TLS in front of it, which is why
+    the refresh cookie's `Secure` flag is configurable. Worth knowing because a non-HTTPS, non-localhost origin
+    is not a *secure context* in the browser's sense - `crypto.subtle`, `navigator.clipboard` and
+    `crypto.randomUUID` are unavailable there. Nothing here depends on the first two, and the third has a
+    fallback since it took the whole application down once.
+12. **No demo recording is included.** [docs/14-demo-script.md](docs/14-demo-script.md) is a shot-by-shot
+    five-minute script and every screen it calls for works, but the video itself is not in this repository.
 
 
