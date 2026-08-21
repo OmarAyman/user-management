@@ -1,0 +1,14 @@
+Drop a corporate root CA here, as a PEM-encoded .crt file, if your network inspects TLS.
+
+Every image build that reaches the network - dotnet restore, npm ci - copies this folder into the container's
+trust store before it starts. On a normal network the folder is empty and nothing changes; behind an
+intercepting proxy an empty folder means restore fails with "the remote certificate is invalid because of
+errors in the certificate chain", which looks like a broken Dockerfile and is a missing CA.
+
+Export one on Windows:
+
+  $cert = Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -match 'Zscaler' } | Select-Object -First 1
+  $pem = "-----BEGIN CERTIFICATE-----`n" + [Convert]::ToBase64String($cert.RawData, 'InsertLineBreaks') + "`n-----END CERTIFICATE-----"
+  Set-Content -Path certs/corporate-root.crt -Value $pem -Encoding ascii
+
+Contents are gitignored: a CA is specific to one network and has no business in this repository.

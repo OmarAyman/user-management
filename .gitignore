@@ -49,3 +49,7 @@ Thumbs.db
 /frontend/playwright-report/
 /frontend/blob-report/
 /frontend/.playwright/
+
+# Corporate CAs for container builds are per-network; the folder is tracked, its contents are not.
+certs/*
+!certs/.gitkeep

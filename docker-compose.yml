@@ -1,10 +1,16 @@
-# The reviewer path: no .NET SDK and no local SQL Server needed.
+# The reviewer path: Docker and nothing else. No .NET SDK, no Node, no local SQL Server.
 #
 #   cp .env.example .env      # then edit MSSQL_SA_PASSWORD and JWT_KEY
-#   docker compose up --build
+#
+#   docker compose up --build                                     # the whole application on :4200
+#   docker compose --profile test run --rm backend-tests          # 109 unit + 153 integration
+#   docker compose --profile test run --rm frontend-tests         # lint, rule checks, 72 Vitest tests
+#   docker compose --profile e2e  run --rm e2e                    # 78 Playwright tests
 #
 # The API applies migrations and seeds the demo accounts on first start, so a working sign-in is one command
-# away. The SPA is still run with npm - a reviewer looking at an Angular application wants the dev server.
+# away. The SPA is served by nginx from a production build, with /api proxied to the API through the same
+# origin - which is what lets the httpOnly refresh cookie work without CORS credentials or a SameSite
+# exemption, exactly as the dev-server proxy does locally.
 
 services:
   mssql:
@@ -54,13 +60,99 @@ services:
       Seed__ReadOnlyPassword: ${SEED_READONLY_PASSWORD:-ReadOnly@1234}
       Seed__SampleUserCount: "24"
 
+      # Same reason the seed is on: a suite that signs in 78 times, or a reviewer clicking through the roles,
+      # would trip a deployment-sized auth limit. The limiter itself is proved by a backend test that sets the
+      # permit limit to 3 and asserts the 429.
+      RateLimiting__AuthPermitLimit: ${AUTH_PERMIT_LIMIT:-200}
+
+      # The SPA is same-origin through the nginx proxy, so CORS is not exercised by the containerised stack.
+      # Kept for a reviewer who prefers to run `npm start` against this API instead.
       Cors__AllowedOrigins__0: "http://localhost:4200"
 
       # http inside the container; a real deployment terminates TLS in front of it, which is also why the
       # refresh cookie's Secure flag is configurable.
       RefreshToken__SecureCookie: "false"
+    expose:
+      - "8080"
     ports:
       - "5080:8080"
 
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: web
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "4200:80"
+
+  # -------------------------------------------------------------------------------------------------------
+  # Test profiles. Nothing below runs during `docker compose up`.
+  # -------------------------------------------------------------------------------------------------------
+
+  # A second database, so a test run never touches the data a reviewer is clicking through.
+  mssql-test:
+    profiles: ["test"]
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?set MSSQL_SA_PASSWORD in .env}
+      MSSQL_PID: Developer
+    volumes:
+      # A separate volume from the application database, so a test run cannot touch the data a reviewer
+      # is clicking through. A tmpfs would be tidier - nothing to clean up - but SQL Server 2022 runs as
+      # a non-root user and cannot initialise itself inside a root-owned tmpfs. Discard it with
+      # `docker compose --profile test down -v`.
+      - mssql-test-data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  backend-tests:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: tests/Dockerfile
+    depends_on:
+      mssql-test:
+        condition: service_healthy
+    environment:
+      # The integration fixture reads this and skips Testcontainers, which is what keeps the Docker socket out
+      # of this container.
+      USERMANAGEMENT_TEST_SQL: "Server=mssql-test,1433;Database=UserManagementTests;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False"
+
+  frontend-tests:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: unit
+    # No dependencies at all: lint, the rule-verification scripts and the Vitest suite need neither a browser
+    # nor a server nor a database.
+
+  e2e:
+    profiles: ["e2e"]
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: e2e
+    depends_on:
+      web:
+        condition: service_started
+    environment:
+      # Inside the network the SPA is on port 80, and the API arrives through its nginx proxy - the same single
+      # origin the browser sees at http://localhost:4200.
+      E2E_BASE_URL: "http://web"
+
 volumes:
   mssql-data:
+  mssql-test-data:

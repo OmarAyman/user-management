@@ -1,0 +1,30 @@
+# Build context hygiene. Without this, every image build ships the host's bin/, obj/ and node_modules into the
+# builder - slower, larger, and worse than that: a stale host artifact can end up inside an image and make a
+# container behave unlike a clean build.
+
+.git
+.gitignore
+.gitattributes
+.dockerignore
+
+**/bin/
+**/obj/
+**/out/
+**/TestResults/
+**/.vs/
+**/.vscode/
+**/.idea/
+
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/out-tsc/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+
+docs/
+postman/
+.env
+.env.*
+!.env.example
