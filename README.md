@@ -6,8 +6,8 @@ delete, an append-only audit trail, and English/Arabic localization with right-t
 
 | | |
 |---|---|
-| **Backend tests** | 114 unit, 153 integration (real SQL Server via Testcontainers) |
-| **Frontend tests** | 75 unit/component (Vitest), 83 browser tests (Playwright: 15 smoke, 27 accessibility, 36 responsive, 5 assets/headers) |
+| **Backend tests** | 114 unit, 158 integration (real SQL Server via Testcontainers) |
+| **Frontend tests** | 81 unit/component (Vitest), 84 browser tests (Playwright: 16 smoke, 27 accessibility, 36 responsive, 5 assets/headers) |
 | **Build** | zero warnings, warnings-as-errors on; `eslint .` clean, with the boundary rules proven to fire |
 
 ---
@@ -246,16 +246,16 @@ which is what lets the httpOnly refresh cookie work in development without CORS 
 ## Running the tests
 
 ```bash
-# Backend: 114 unit + 153 integration
+# Backend: 114 unit + 158 integration
 dotnet test
 
 # Fast loop, no Docker required
 dotnet test tests/UserManagement.UnitTests
 
-# Frontend: 75 unit and component tests
+# Frontend: 81 unit and component tests
 npm test --prefix frontend
 
-# Browser suite, 83 tests: needs the API and the SPA running
+# Browser suite, 84 tests: needs the API and the SPA running
 npm run e2e --prefix frontend
 
 # Lint, and a check that the architectural lint rules actually fire
@@ -426,9 +426,9 @@ changes.
 ### The suites, in containers
 
 ```bash
-docker compose --profile test run --rm --build backend-tests     # 114 unit + 153 integration
-docker compose --profile test run --rm --build frontend-tests    # lint, rule checks, 75 Vitest tests
-docker compose --profile e2e  run --rm --build e2e               # 83 Playwright tests
+docker compose --profile test run --rm --build backend-tests     # 114 unit + 158 integration
+docker compose --profile test run --rm --build frontend-tests    # lint, rule checks, 81 Vitest tests
+docker compose --profile e2e  run --rm --build e2e               # 84 Playwright tests
 ```
 
 Nothing in the `test` or `e2e` profile starts during `docker compose up`.
@@ -506,7 +506,7 @@ user-management/
     |-- Dockerfile  nginx.conf       production bundle behind nginx, /api proxied same-origin
     |-- eslint.config.js             boundary rules, sanitizer ban, template a11y and i18n
     |-- scripts/                     prove the lint rules fire; no physical left/right in styles
-    |-- e2e/                         83 Playwright tests: smoke, accessibility, responsive, assets
+    |-- e2e/                         84 Playwright tests: smoke, accessibility, responsive, assets
     |-- demo/                        records the walkthrough in docs/14-demo-script.md as video
     `-- src/app/
         |-- core/                    auth, guards, interceptors, i18n, api clients, models
@@ -582,7 +582,7 @@ Stated rather than hidden.
    the application's principal needs `INSERT` and `SELECT` on `AuditLogs` and nothing more.
 7. **Restoring a deleted user can fail** if their username or email was taken while they were deleted. That is
    the deliberate consequence of releasing identifiers on deletion, and it returns a clear `409`.
-8. **Browser coverage is 83 tests, not an exhaustive end-to-end suite.** The weight is in accessibility and
+8. **Browser coverage is 84 tests, not an exhaustive end-to-end suite.** The weight is in accessibility and
    responsive layout - things only a browser can answer. Deep behaviour lives in the component and API tests,
    where it does not flake.
 9. **Arabic copy is authored, not professionally reviewed.** A native-speaker pass would be the next step.

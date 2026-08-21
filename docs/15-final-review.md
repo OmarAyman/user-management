@@ -8,9 +8,9 @@ well, which is how the storage-globals problem in section 6 came to light.
 
 ```text
 dotnet build                       0 warnings, 0 errors      (warnings-as-errors enabled)
-dotnet test                        114 unit + 153 integration passed
-npm test --prefix frontend         75 passed
-npm run e2e --prefix frontend      83 passed
+dotnet test                        114 unit + 158 integration passed
+npm test --prefix frontend         81 passed
+npm run e2e --prefix frontend      84 passed
 npm run lint --prefix frontend     0 problems
 npm run lint:verify --prefix frontend   9 lint-rule checks passed
 npm run lint:styles --prefix frontend   no physical direction properties
@@ -18,7 +18,7 @@ newman run postman/...             42 requests, 66 assertions, 0 failures (run t
 docker compose up --build          three services healthy; all three suites also run in containers
 ```
 
-Total: **425 automated tests, all passing**, plus 66 Postman assertions and 9 lint-rule checks.
+Total: **437 automated tests, all passing**, plus 66 Postman assertions and 9 lint-rule checks.
 
 ---
 
@@ -63,8 +63,8 @@ The brief's 41-item gate, with what proves each line.
 | 33 | Swagger works | Pass | UI returns 200; 13 paths; Bearer scheme present |
 | 34 | Postman collection exists | Pass | 8 folders, 42 requests, 66 assertions; run through newman twice with zero failures |
 | 35 | Unit tests pass | Pass | 114 |
-| 36 | Integration tests pass | Pass | 153, against real SQL Server |
-| 37 | Angular tests pass | Pass | 75 Vitest + 83 Playwright, the browser suite run against both the dev server and the containerised production build |
+| 36 | Integration tests pass | Pass | 158, against real SQL Server |
+| 37 | Angular tests pass | Pass | 81 Vitest + 84 Playwright, the browser suite run against both the dev server and the containerised production build |
 | 38 | README complete | Pass | all 17 required sections |
 | 39 | No secrets committed | Pass | `git grep` for key patterns; only documented demo passwords and PBKDF2 hash literals |
 | 40 | Git history meaningful | Pass | one coherent slice per commit, each explaining *why*; no history rewritten during hardening |
@@ -86,10 +86,9 @@ Summary by area:
 | API design, errors, validation | 8 | 8 | |
 | Localization and UX | 12 | 12 | Accessibility and responsive layout moved from `Partial` to `Verified` in the hardening pass, on the strength of 63 browser tests |
 | Security review | 7 | 7 | section 3 below |
-| Testing, documentation, delivery | 15 | 14 | The one exception is the demo **recording** (J-15): the script is written and every screen it calls for works, but no video is in the repository |
+| Testing, documentation, delivery | 15 | 15 | The demo recording (J-15) is now produced: a 4:04 silent capture with on-screen captions, regenerable from `frontend/demo/walkthrough.spec.ts`, with the reasoning behind each beat written into the README's Demo section |
 
-Nothing is marked verified without a named test or a recorded run, and the one thing that is missing is listed
-as missing rather than dropped from the matrix.
+Nothing is marked verified without a named test or a recorded run.
 
 ## 3. Security review
 
@@ -235,9 +234,9 @@ invisible until the application was built, served and driven the way a deploymen
 
 ```text
 docker compose up --build                                          three services healthy; sign-in on :4200
-docker compose --profile test run --rm --build backend-tests       114 unit + 153 integration passed
-docker compose --profile test run --rm --build frontend-tests      lint clean, 9 rule checks, 75 Vitest
-docker compose --profile e2e  run --rm --build e2e                 83 Playwright passed
+docker compose --profile test run --rm --build backend-tests       114 unit + 158 integration passed
+docker compose --profile test run --rm --build frontend-tests      lint clean, 9 rule checks, 81 Vitest
+docker compose --profile e2e  run --rm --build e2e                 84 Playwright passed
 ```
 
 `--build` is part of the command rather than a flourish: Compose builds a missing image and never rebuilds a

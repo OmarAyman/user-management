@@ -9,7 +9,7 @@ Three layers, each answering a different question, with no attempt to hit a cove
 | Domain + Application unit tests | Do the rules hold in isolation? | xUnit, NSubstitute, FluentAssertions, AutoFixture-free explicit builders | milliseconds, no I/O |
 | API integration tests | Does the whole stack behave over HTTP, against a real database? | `WebApplicationFactory`, Testcontainers SQL Server 2022, Respawn | seconds per class |
 | Frontend tests | Do services, guards, interceptors and components behave? | Vitest + Angular testing utilities, `HttpTestingController` | milliseconds |
-| Browser tests | Do the SPA and the API actually meet, is the interface accessible, does it hold together at four widths? | Playwright, Chromium, axe-core; seven specs (section 4b) | minutes |
+| Browser tests | Do the SPA and the API actually meet, is the interface accessible, does it hold together at four widths? | Playwright, Chromium, axe-core; eight specs (section 4b) | minutes |
 
 The database in integration tests is **real SQL Server in Docker**, not the in-memory provider. Global query
 filters, `LIKE` translation, `OFFSET/FETCH`, unique-index violations and `datetimeoffset` behaviour are
@@ -242,22 +242,22 @@ always a secure context, and the difference hid a defect that made the applicati
 ## 6. Commands
 
 ```bash
-dotnet test                                            # 114 unit + 153 integration
+dotnet test                                            # 114 unit + 158 integration
 dotnet test tests/UserManagement.UnitTests             # fast loop, no Docker needed
 dotnet test --collect:"XPlat Code Coverage"            # coverage for the report
-npm test --prefix frontend                             # 75 Vitest tests, watch off in CI
+npm test --prefix frontend                             # 81 Vitest tests, watch off in CI
 npm run lint --prefix frontend                         # ESLint: boundaries, sanitizer ban, template a11y + i18n
 npm run lint:verify --prefix frontend                  # proves each of those rules actually fires
 npm run lint:styles --prefix frontend                  # no physical left/right in any stylesheet
-npm run e2e --prefix frontend                          # 83 Playwright tests, Chromium, API + SPA must be up
+npm run e2e --prefix frontend                          # 84 Playwright tests, Chromium, API + SPA must be up
 ```
 
 Or entirely in containers, with no SDK, Node or SQL Server installed:
 
 ```bash
-docker compose --profile test run --rm --build backend-tests     # 114 unit + 153 integration
-docker compose --profile test run --rm --build frontend-tests    # lint, rule checks, 75 Vitest tests
-docker compose --profile e2e  run --rm --build e2e               # 83 Playwright tests against the built SPA
+docker compose --profile test run --rm --build backend-tests     # 114 unit + 158 integration
+docker compose --profile test run --rm --build frontend-tests    # lint, rule checks, 81 Vitest tests
+docker compose --profile e2e  run --rm --build e2e               # 84 Playwright tests against the built SPA
 ```
 
 `--build` matters: Compose builds a missing image but never rebuilds a stale one, so omitting it silently runs
@@ -271,7 +271,7 @@ context (see [15-final-review.md](15-final-review.md) section 5).
 
 ## 7. What is not tested, and why
 
-- **No deep end-to-end suite.** The browser suite grew during hardening from five smoke specs to 83 tests, but
+- **No deep end-to-end suite.** The browser suite grew during hardening from five smoke specs to 84 tests, but
   the added weight is all in accessibility (27) and responsive layout (36) - two things only a real browser can
   answer. Behaviour stays where it is cheaper and steadier: component tests over a mocked HTTP layer, and
   integration tests against real SQL Server. Deep flows (every validation message, every error state, every role

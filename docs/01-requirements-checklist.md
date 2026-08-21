@@ -8,9 +8,9 @@ it — never from inspection. The evidence for each area is summarised in
 
 ```text
 dotnet build                       0 warnings, 0 errors
-dotnet test                        114 unit + 153 integration passed
-npm test --prefix frontend         75 passed
-npm run e2e --prefix frontend      83 passed
+dotnet test                        114 unit + 158 integration passed
+npm test --prefix frontend         81 passed
+npm run e2e --prefix frontend      84 passed
 npm run lint --prefix frontend     0 problems, and 9 rule checks proving the rules fire
 newman run postman/...             42 requests, 66 assertions, 0 failures
 docker compose up --build          the whole stack; all three suites also run in containers
@@ -21,9 +21,9 @@ submission-hardening pass with automated audits and are now `Verified`; the unte
 audit are enumerated in [16-accessibility-audit.md](16-accessibility-audit.md) section 5 rather than hidden
 behind the word.
 
-**Nothing is `Partial`. One row is `Not Implemented`: J-15, the demo recording.** The script for it is written
-and every screen it calls for works, but a video is a human deliverable and none is included here. It is listed
-as missing rather than quietly dropped from the matrix.
+**Nothing is `Partial` and nothing is `Not Implemented`.** The last open row, J-15, was the demo recording; it
+is now produced - silent, captioned, and regenerable from a spec that asserts as it runs, with the narration's
+reasoning written into the README's Demo section.
 
 The hardening pass also added: forwarded-header handling (opt-in, with tests), an audit-policy conformance
 test, error-response disclosure tests, and log-redaction tests. Those rows carry phase 10.
@@ -184,7 +184,7 @@ show it.
 | J-01 | 34 | Unit tests for the listed behaviours | `tests/UserManagement.UnitTests` (xUnit + NSubstitute) | 8 | Verified |
 | J-02 | 34 | Integration tests for the listed API flows | `tests/UserManagement.IntegrationTests` (`WebApplicationFactory` + Testcontainers SQL Server) | 8 | Verified |
 | J-03 | 34 | Prove Admin can mutate, User and ReadOnlyUser cannot | Parameterised authorization matrix test | 8 | Verified |
-| J-04 | 35 | Frontend tests for services, guards, interceptors, components, validation, role behaviour | 75 Vitest tests with the Angular testing utilities, including three that pin correlation-id generation outside a secure context - the defect that made the SPA unusable on any non-localhost HTTP origin | 8, 10 | Verified |
+| J-04 | 35 | Frontend tests for services, guards, interceptors, components, validation, role behaviour | 81 Vitest tests with the Angular testing utilities, including three that pin correlation-id generation outside a secure context (the defect that made the SPA unusable on any non-localhost HTTP origin) and six that pin the edit form loading its user at all | 8, 10 | Verified |
 | J-05 | 48 | Every listed edge case explicitly tested | Edge-case table in [10-testing-plan.md](10-testing-plan.md) | 8 | Verified |
 | J-06 | 42 | Dockerfile + docker-compose for API and SQL Server | `docker compose up --build` runs SQL Server, the API and the SPA behind nginx on `:4200`; three more services run the backend suites, the frontend suite and the browser suite in containers. The API image **never built** until phase 10 - `adduser` does not exist in the .NET 10 runtime image - so this row was previously verified against a Dockerfile nobody had executed | 9, 10 | Verified |
 | J-07 | 43 | Professional README with the 17 required sections | Root `README.md` rewritten in Phase 9 | 9 | Verified |
@@ -192,10 +192,10 @@ show it.
 | J-09 | 52 | Final traceability matrix, nothing claimed without verification | This file, completed in Phase 10 | 10 | Verified |
 | J-10 | 55 | 41-item final quality gate all green | Gate checklist executed in Phase 10 | 10 | Verified |
 | J-11 | 59 | 5-minute demo script | `docs/14-demo-script.md` | 9 | Verified |
-| J-12 | added | Browser coverage | 83 Playwright tests over eight specs, Chromium only (ADR-0015): 15 smoke, 27 accessibility, 36 responsive, 5 asset/header. Run against both the dev server and the containerised production build - the difference between the two is what exposed the secure-context defect | 8, 10 | Verified |
+| J-12 | added | Browser coverage | 84 Playwright tests over eight specs, Chromium only (ADR-0015): 15 smoke, 27 accessibility, 36 responsive, 5 asset/header. Run against both the dev server and the containerised production build - the difference between the two is what exposed the secure-context defect | 8, 10 | Verified |
 | J-13 | added | Concurrency, audit-redaction, soft-delete-authorization and refresh-rotation tests | Named in [10-testing-plan.md](10-testing-plan.md) | 8 | Verified |
 | J-14 | added | Frontend boundaries enforced, not merely documented | `import-x/no-restricted-paths` for all four boundary rules, plus bans on `bypassSecurityTrust*` and stray `localStorage` writes; `npm run lint:verify` lints nine deliberate violations to prove the rules fire | 10 | Verified |
-| J-15 | 59 | **Demo recording** | Not produced. [14-demo-script.md](14-demo-script.md) is a shot-by-shot script with timings for the five minutes, and every screen and behaviour it calls for is present in the running application - but recording it is a human act, and no video is included in this repository | 9 | **Not Implemented** |
+| J-15 | 59 | **Demo recording** | A 4:04 capture of the running application covering every beat of [14-demo-script.md](14-demo-script.md), regenerated by `npm run demo:record` from a spec that asserts as it goes - so a completed run is evidence the features worked. It is silent, and the reasoning a narrator would give is written into the README's Demo section instead. Submitted alongside the repository rather than committed to it, since git is the wrong home for a video | 9, 10 | Verified |
 
 ## Deliberate additions beyond the literal assignment
 
