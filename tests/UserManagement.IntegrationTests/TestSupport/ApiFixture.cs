@@ -19,8 +19,6 @@ namespace UserManagement.IntegrationTests.TestSupport;
 /// </remarks>
 public sealed class ApiFixture : IAsyncLifetime
 {
-    private const string FallbackEnvironmentVariable = "USERMANAGEMENT_TEST_SQL";
-
     private MsSqlContainer? _container;
     private UserManagementApi? _api;
 
@@ -30,9 +28,10 @@ public sealed class ApiFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var fallback = Environment.GetEnvironmentVariable(FallbackEnvironmentVariable);
+        // One database per fixture, because both collections initialise in parallel. See TestDatabase.
+        var fallback = TestDatabase.ConnectionStringFor("Api");
 
-        if (!string.IsNullOrWhiteSpace(fallback))
+        if (fallback is not null)
         {
             ConnectionString = fallback;
         }

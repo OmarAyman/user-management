@@ -25,8 +25,6 @@ namespace UserManagement.IntegrationTests.TestSupport;
 /// </remarks>
 public sealed class SqlServerFixture : IAsyncLifetime
 {
-    private const string FallbackEnvironmentVariable = "USERMANAGEMENT_TEST_SQL";
-
     private MsSqlContainer? _container;
     private ServiceProvider? _services;
 
@@ -39,9 +37,10 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var fallback = Environment.GetEnvironmentVariable(FallbackEnvironmentVariable);
+        // One database per fixture, because both collections initialise in parallel. See TestDatabase.
+        var fallback = TestDatabase.ConnectionStringFor("Persistence");
 
-        if (!string.IsNullOrWhiteSpace(fallback))
+        if (fallback is not null)
         {
             ConnectionString = fallback;
         }
