@@ -14,9 +14,10 @@ delete, an append-only audit trail, and English/Arabic localization with right-t
 
 ## Demo
 
-A 4-minute screen recording accompanies this submission, covering every feature below in order. It is a
-**silent capture with on-screen captions**, so the reasoning behind each screen is written out here rather
-than narrated:
+**[Watch the demo recording (4:04)](https://drive.google.com/drive/folders/1s6X0A_XK6r9WfA7-f4dqB_Wl6lxWJeoh?usp=sharing)**
+
+It covers every feature below, in order. It is a **silent capture with on-screen captions**, so the reasoning
+behind each screen is written out here rather than narrated:
 
 | What the recording shows | The decision behind it |
 |---|---|
