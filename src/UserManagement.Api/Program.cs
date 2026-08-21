@@ -223,11 +223,20 @@ static async Task ApplyDatabaseStartupTasksAsync(WebApplication app)
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await context.Database.MigrateAsync();
+
+    // Retried, because a database container answers SELECT 1 - and so passes its health check - before it has
+    // finished bringing user databases online. EF then asks whether the database exists, is told it does not,
+    // issues CREATE DATABASE and gets error 1801: it already does. The process died on startup, which made the
+    // second `docker compose up` against an existing volume fail where the first succeeded.
+    await StartupRetry.RunAsync(
+        () => context.Database.MigrateAsync(),
+        "Database migration",
+        logger);
+
     logger.LogInformation("Database migrations applied");
 
     var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-    await seeder.SeedAsync();
+    await StartupRetry.RunAsync(() => seeder.SeedAsync(), "Seeding", logger);
 }
 
 /// <summary>
