@@ -437,7 +437,7 @@ postman/UserManagement.postman_collection.json
 postman/UserManagement.postman_environment.json
 ```
 
-Import both, then run **Authentication â†’ Login (Admin)** first: its test script captures the access token and,
+Import both, then run **Authentication -> Login (Admin)** first: its test script captures the access token and,
 later, the created user's id and concurrency token, so nothing has to be copied by hand. The refresh token
 never appears in a response body - Postman keeps the httpOnly cookie in its own jar, which is why *Refresh
 session* needs no input.
@@ -447,35 +447,45 @@ invalid sort field, a stale concurrency token, and the mass-assignment payload t
 
 ## Project structure
 
+Plain ASCII connectors on purpose: this block was silently mangled twice by an editor encoding round-trip, and
+box-drawing characters are what got mangled.
+
 ```text
 user-management/
-â”œâ”€â”€ UserManagement.slnx
-â”œâ”€â”€ Directory.Build.props        nullable, warnings-as-errors, analyzers - in one place
-â”œâ”€â”€ Directory.Packages.props     central package versions
-â”œâ”€â”€ NuGet.config                 nuget.org only, so a clone is reproducible
-â”œâ”€â”€ docker-compose.yml           api + SQL Server
-â”œâ”€â”€ database/
-â”‚   â”œâ”€â”€ 001_schema.sql           GENERATED from the migrations
-â”‚   â”œâ”€â”€ 002_seed.sql             demo accounts, hash literals only
-â”‚   â”œâ”€â”€ 003_sample_queries.sql   the queries the app issues, with the index each uses
-â”‚   â””â”€â”€ generate-schema-script.ps1
-â”œâ”€â”€ docs/                        the design set, ADRs, audit policy, demo script
-â”œâ”€â”€ postman/
-â”œâ”€â”€ src/
-â”‚   â”œâ”€â”€ UserManagement.Api/           controllers, contracts, validators, error handling, middleware
-â”‚   â”œâ”€â”€ UserManagement.Application/   features/<area>/<use case>/, ports, common models
-â”‚   â”œâ”€â”€ UserManagement.Domain/        entities, enums, constants, invariants
-â”‚   â””â”€â”€ UserManagement.Infrastructure/persistence, interceptors, repositories, security, seeding
-â”œâ”€â”€ tests/
-â”‚   â”œâ”€â”€ UserManagement.UnitTests/         domain, handlers, auditing, architecture
-â”‚   â””â”€â”€ UserManagement.IntegrationTests/ real SQL Server, real HTTP pipeline
-â””â”€â”€ frontend/
-    â”œâ”€â”€ e2e/                     five Playwright smoke specs
-    â””â”€â”€ src/app/
-        â”œâ”€â”€ core/                singletons: auth, guards, interceptors, api clients, models
-        â”œâ”€â”€ shared/              stateless components, directives
-        â”œâ”€â”€ layout/              the application shell
-        â””â”€â”€ features/            auth, users, profile, audit - all lazy-loaded
+|-- UserManagement.slnx
+|-- Directory.Build.props            nullable, warnings-as-errors, analyzers - in one place
+|-- Directory.Packages.props         central package versions
+|-- NuGet.config                     nuget.org only, so a clone is reproducible
+|-- docker-compose.yml               mssql + api + web, plus test and e2e profiles
+|-- .env.example                     copy to .env; sa password and JWT key are required
+|-- certs/                           optional corporate root CAs for image builds (contents gitignored)
+|-- database/
+|   |-- 001_schema.sql               GENERATED from the migrations - never hand-edited
+|   |-- 002_seed.sql                 demo accounts, hash literals only, no plaintext
+|   |-- 003_sample_queries.sql       the queries the app issues, with the index each uses
+|   `-- generate-schema-script.ps1   regenerates 001_schema.sql with the required SET options
+|-- docs/                            the design set, ADRs, audit policy, demo script, final review
+|-- postman/                         collection + environment: 42 requests, 66 assertions
+|-- src/
+|   |-- UserManagement.Api/          controllers, contracts, validation, errors, middleware
+|   |-- UserManagement.Application/  Features/<area>/<use case>/, ports, common models
+|   |-- UserManagement.Domain/       entities, enums, constants, invariants
+|   `-- UserManagement.Infrastructure/  persistence, interceptors, repositories, security, seeding
+|-- tests/
+|   |-- Dockerfile                   runs both backend suites in a container
+|   |-- UserManagement.UnitTests/    domain, handlers, auditing, architecture, configuration
+|   `-- UserManagement.IntegrationTests/  real SQL Server, real HTTP pipeline
+`-- frontend/
+    |-- Dockerfile  nginx.conf       production bundle behind nginx, /api proxied same-origin
+    |-- eslint.config.js             boundary rules, sanitizer ban, template a11y and i18n
+    |-- scripts/                     prove the lint rules fire; no physical left/right in styles
+    |-- e2e/                         83 Playwright tests: smoke, accessibility, responsive, assets
+    |-- demo/                        records the walkthrough in docs/14-demo-script.md as video
+    `-- src/app/
+        |-- core/                    auth, guards, interceptors, i18n, api clients, models
+        |-- shared/                  stateless components and directives
+        |-- layout/                  the application shell
+        `-- features/                auth, users, profile, audit, errors - all lazy-loaded
 ```
 
 ## Design decisions
