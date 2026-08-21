@@ -16,6 +16,16 @@ Either way, have Swagger open in a second tab (`http://localhost:5080/swagger`) 
 recording starts at the sign-in screen. If you have restarted the stack a few times while rehearsing, run
 `docker compose --profile test down -v` and `up` again for a clean 28-user list.
 
+**A recorded visual track exists.** `npm run demo:record --prefix frontend` drives the application through
+every beat below and writes a 720p video to `frontend/demo-recording/`. It is silent by design: the value of
+this demo is what gets said over each screen, and no script can supply that. Use it to rehearse, to narrate
+over, or as a fallback if a live recording will not cooperate.
+
+Two things it does differently from a person at a keyboard, because Playwright records the page rather than the
+browser window: it cannot show the address bar and it cannot open DevTools. Where the script says "the URL
+updates" or "open local storage", the recording reads the real value from the live page and draws it as an
+overlay. Nothing on screen is authored text pretending to be output.
+
 **One deliberate deviation from the obvious running order:** soft delete comes *before* the audit trail. The
 reverse order is more natural to describe, but it means opening the audit screen before the deletion has
 happened — so the most interesting rows are missing from the very screen meant to show them. Deleting first
@@ -119,6 +129,37 @@ the viewer just watched happen, which is the whole point of that minute.
    ```
    *Structured, with a stable code the SPA and the tests branch on, a localized sentence, and a trace id that
    also appears in the logs. Sorting is a whitelist, so a column name from a client never reaches SQL.*
+
+---
+
+## Narration cues
+
+For the live take. One or two sentences per beat, said while operating the application - not read aloud. The
+pattern is **what, why, evidence, move on**; the demo is four to five minutes, so nothing here gets a paragraph.
+
+| Beat | Say roughly this |
+|---|---|
+| **0:00 open** | "A user management module: .NET 10, Angular 21, SQL Server, Clean Architecture. Three roles, JWT with rotating refresh tokens, soft delete, auditing at the persistence layer, English and Arabic, and optimistic concurrency." Then stop talking and start clicking. |
+| **Sign in** | "Passwords are hashed and salted. The access token is held in memory rather than local storage; the refresh token is a separate httpOnly cookie that rotates on every use." Show the refused sign-in: "an unknown username, a wrong password and a deleted account all get the same answer, so this cannot be used to discover whether an account exists." |
+| **Create user** | "Username and email uniqueness is enforced in the database, for active users only. The form checks availability on blur as a courtesy - the database is still the authority when it is submitted." |
+| **Search, sort, paging** | "List state lives in the URL, so a filtered view is shareable and the back button behaves." One sentence; move on. |
+| **Soft delete** | "Delete is a soft delete. The normal query path excludes deleted users automatically, and restoring one is a separately authorized operation." On the second delete: "that is a structured 409 conflict rather than letting the state go inconsistent." |
+| **Audit trail** | "Auditing runs in an EF Core interceptor at the persistence layer, so it cannot be forgotten by a caller." Then the line worth saying slowly: "audit identity is the immutable user id, not the username - usernames are released when a user is soft-deleted and can be reused by someone else." |
+| **Read-only role** | "The interface hides what this role cannot do, but authorization is enforced on the API. Here is the same operation called directly - 403." That demonstration is the point; let it land. |
+| **Profile** | "A user can edit their own profile and cannot change their own role. The profile contract has no role field at all." |
+| **Arabic** | "English and Arabic, including right-to-left layout and localized validation and error messages." Switch, let it render, move on. |
+| **Close** | "425 automated tests: backend unit and integration against real SQL Server, Angular component tests, and a Playwright browser suite covering accessibility and responsive layout - plus 66 Postman assertions. Verified from a clean clone, and the whole stack runs on one Docker command." |
+
+**The closing number was 412 earlier in the project and is now 425** - 114 unit, 153 integration, 75 Angular,
+83 browser. Say the current figure or say "over four hundred"; a number an assessor can check and find wrong is
+worse than no number.
+
+**Leave out the development story.** The `crypto.randomUUID` defect - every suite green while the application
+was unusable outside localhost - does not belong in a submission demo. It is an excellent answer to "what was
+the most interesting bug you found?" in an interview, because it shows the difference between tests passing and
+a system being deployable. In a four-minute demo it spends time on the journey instead of the product.
+
+Same for the rest of the defect list. The demo shows the finished thing.
 
 ---
 

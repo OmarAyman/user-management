@@ -10,7 +10,8 @@
     "e2e": "playwright test",
     "lint": "eslint .",
     "lint:verify": "node scripts/verify-lint-rules.mjs",
-    "lint:styles": "node scripts/verify-logical-properties.mjs"
+    "lint:styles": "node scripts/verify-logical-properties.mjs",
+    "demo:record": "playwright test --config playwright.demo.config.ts"
   },
   "private": true,
   "engines": {

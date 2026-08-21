@@ -32,6 +32,7 @@ npm-debug.log*
 yarn-error.log*
 *.tsbuildinfo
 playwright-report/
+frontend/demo-recording/
 test-results/
 
 ## Runtime output - Serilog writes a rolling file per day next to the API

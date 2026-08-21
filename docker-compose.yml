@@ -65,6 +65,12 @@ services:
       # permit limit to 3 and asserts the 429.
       RateLimiting__AuthPermitLimit: ${AUTH_PERMIT_LIMIT:-200}
 
+      # Swagger is off outside Development by design - an API that publishes its own surface in production is a
+      # reconnaissance aid. Compose is the reviewer path, and a reviewer wants to call the endpoints, so it is
+      # switched on here explicitly. Set SWAGGER_ENABLED=false to see the production behaviour. Without this the
+      # README's own link to :5080/swagger was a 404 on the only path it tells you to use.
+      Swagger__Enabled: ${SWAGGER_ENABLED:-true}
+
       # The SPA is same-origin through the nginx proxy, so CORS is not exercised by the containerised stack.
       # Kept for a reviewer who prefers to run `npm start` against this API instead.
       Cors__AllowedOrigins__0: "http://localhost:4200"
