@@ -35,7 +35,20 @@ async function signIn(page: Page, who: { username: string; password: string }): 
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
+/** Prints elapsed time per beat, so the cue sheet in docs/14-demo-script.md carries real timestamps. */
+function marker(): (label: string) => void {
+  const started = Date.now();
+
+  return (label: string) => {
+    const seconds = Math.round((Date.now() - started) / 1000);
+    console.log(`[${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}] ${label}`);
+  };
+}
+
 test('user management walkthrough', async ({ page }) => {
+  const mark = marker();
+  mark('sign in');
+
   // ------------------------------------------------------------------ sign in
   await page.goto('/login');
   await expect(page.getByLabel('Username')).toBeVisible();
@@ -58,6 +71,7 @@ test('user management walkthrough', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
 
   // ------------------------------------------------------------------ the list, and where the token lives
+  mark('user list and token storage');
   await caption(page, 'The user list: newest first, with role and status per row.', 2400);
 
   const storage = await page.evaluate(() =>
@@ -76,6 +90,7 @@ test('user management walkthrough', async ({ page }) => {
   await clearOverlays(page);
 
   // ------------------------------------------------------------------ create a user
+  mark('create user');
   await page.getByRole('link', { name: /Create user/ }).click();
   await expect(page.getByLabel('Username')).toBeVisible();
   await caption(page, 'Creating a user. The username is immutable once set, and the password policy is stated up front.', 3200);
@@ -103,7 +118,115 @@ test('user management walkthrough', async ({ page }) => {
   await caption(page, 'Created, and announced through a live region rather than by colour alone.', 2600);
   await clearOverlays(page);
 
+  // ------------------------------------------------------------------ edit an existing user
+  mark('edit user');
+  await page.getByLabel('Search').fill(NEW_USER);
+  await page.waitForTimeout(1100);
+
+  // The row action is an anchor labelled "Edit <username>", and naming the user keeps it unambiguous while the
+  // table still holds other rows.
+  await page
+    .getByRole('row', { hasText: NEW_USER })
+    .getByRole('link', { name: new RegExp(`Edit ${NEW_USER}`) })
+    .click();
+
+  await expect(page.getByRole('heading', { name: 'Edit user' })).toBeVisible();
+
+  // Asserted, not merely filmed: a passing run is the proof that the recording shows a populated form rather
+  // than the empty one this page used to render.
+  await expect(page.getByLabel('Username')).toHaveValue(NEW_USER);
+  await expect(page.getByLabel('Email')).toHaveValue(`${NEW_USER}@example.com`);
+  await expect(page.getByLabel('First name')).toHaveValue('Demo');
+  await expect(page.getByLabel('Username')).toBeDisabled();
+
+  await caption(page, 'Opening an existing user: the form arrives populated from the API.', 3000);
+  await caption(
+    page,
+    'Username is <b>disabled</b> - it is immutable server-side, so the form does not offer it. Changing a '
+      + 'password is its own endpoint, and only the owner can call it.',
+    4000,
+  );
+  await clearOverlays(page);
+
+  await page.getByLabel('First name').fill('Demonstration');
+  await page.getByLabel('Role').click();
+  await page.getByRole('option', { name: 'Read-only user' }).click();
+  await caption(page, 'Editing what may be edited: the profile fields, and the role - which lives on the admin route only.', 3600);
+  await clearOverlays(page);
+
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
+  await caption(page, 'Saved. A role change is its own audit action, which the trail will show in a moment.', 3000);
+  await clearOverlays(page);
+
+  // ------------------------------------------------------------------ optimistic concurrency, naturally
+  mark('concurrency conflict');
+  await page.getByLabel('Search').fill(NEW_USER);
+  await page.waitForTimeout(1100);
+  await page
+    .getByRole('row', { hasText: NEW_USER })
+    .getByRole('link', { name: new RegExp(`Edit ${NEW_USER}`) })
+    .click();
+  await expect(page.getByLabel('Email')).toHaveValue(`${NEW_USER}@example.com`);
+
+  await caption(page, 'Now two administrators hold the same user open. This form is loaded; someone else saves first.', 3600);
+
+  // The "other administrator", from the page's own context: sign in, read the row, save a change. Nothing is
+  // simulated - it is a real request, and it moves the row version on.
+  const other = await page.evaluate(async (username: string) => {
+    const login = await fetch('/api/auth/login', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'admin', password: 'Admin@123456' }),
+    });
+
+    const { accessToken } = (await login.json()) as { accessToken: string };
+    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` };
+
+    const found = await fetch(`/api/users?search=${username}`, { headers });
+    const { items } = (await found.json()) as { items: { id: string }[] };
+
+    const current = await fetch(`/api/users/${items[0].id}`, { headers });
+    const user = (await current.json()) as Record<string, unknown>;
+
+    const saved = await fetch(`/api/users/${items[0].id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({
+        email: user['email'],
+        firstName: 'Someone',
+        lastName: 'Else',
+        roleId: user['roleId'],
+        rowVersion: user['rowVersion'],
+      }),
+    });
+
+    return `PUT /api/users/{id}   (the other administrator)\n\nHTTP ${saved.status} - their version is now the current one`;
+  }, NEW_USER);
+
+  await detail(page, other, 3000);
+  await clearOverlays(page);
+
+  // The open form still holds the row version it loaded, which is exactly the point.
+  await page.getByLabel('Last name').fill('Stale');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await page.waitForTimeout(1400);
+
+  await caption(
+    page,
+    'Saving now is refused with <b>409 RESOURCE_MODIFIED</b>. The row version this form loaded is no longer '
+      + 'current, so the second save cannot silently overwrite the first - which is what a lost update is, and '
+      + 'it would leave the audit trail describing both changes as deliberate.',
+    5200,
+  );
+  await clearOverlays(page);
+
+  await page.goto('/users');
+  await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
+
   // ------------------------------------------------------------------ search, sort, empty state
+  mark('search, sort, empty state');
   await page.getByLabel('Search').fill(NEW_USER);
   await page.waitForTimeout(1000);
   await showUrl(page, 2600);
@@ -129,6 +252,7 @@ test('user management walkthrough', async ({ page }) => {
   await clearOverlays(page);
 
   // ------------------------------------------------------------------ soft delete and restore
+  mark('soft delete and restore');
   // Before the audit trail on purpose, so the audit screen shows this lifecycle rather than an empty one.
   await page.getByLabel('Search').fill(NEW_USER);
   await page.waitForTimeout(1100);
@@ -169,6 +293,7 @@ test('user management walkthrough', async ({ page }) => {
   await clearOverlays(page);
 
   // ------------------------------------------------------------------ audit trail
+  mark('audit trail');
   await page.getByRole('link', { name: 'Audit' }).click();
   await page.waitForTimeout(1600);
   await caption(page, 'The lifecycle just performed, newest first: created, deleted, restored.', 3400);
@@ -181,6 +306,7 @@ test('user management walkthrough', async ({ page }) => {
   await clearOverlays(page);
 
   // ------------------------------------------------------------------ role-based authorization
+  mark('read-only role and a direct 403');
   await page.goto('/login');
   await page.waitForTimeout(600);
   await signIn(page, READONLY);
@@ -203,6 +329,7 @@ test('user management walkthrough', async ({ page }) => {
   await clearOverlays(page);
 
   // ------------------------------------------------------------------ profile
+  mark('profile');
   await page.getByRole('link', { name: 'Profile' }).click();
   await page.waitForTimeout(1400);
   await caption(
@@ -214,6 +341,7 @@ test('user management walkthrough', async ({ page }) => {
   await clearOverlays(page);
 
   // ------------------------------------------------------------------ Arabic and RTL
+  mark('Arabic and RTL');
   await page.getByRole('button', { name: LANGUAGE_BUTTON }).click();
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await caption(
@@ -231,6 +359,7 @@ test('user management walkthrough', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
 
   // ------------------------------------------------------------------ the API on its own
+  mark('structured error and Swagger');
   const problem = await page.evaluate(async () => {
     const response = await fetch('/api/users?sortBy=passwordHash', { credentials: 'include' });
 
@@ -253,4 +382,5 @@ test('user management walkthrough', async ({ page }) => {
   await page.waitForLoadState('networkidle');
   await caption(page, 'And the API stands on its own: Swagger, with the bearer scheme wired up.', 4000);
   await page.waitForTimeout(1500);
+  mark('end');
 });

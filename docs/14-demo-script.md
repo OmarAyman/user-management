@@ -137,18 +137,24 @@ the viewer just watched happen, which is the whole point of that minute.
 For the live take. One or two sentences per beat, said while operating the application - not read aloud. The
 pattern is **what, why, evidence, move on**; the demo is four to five minutes, so nothing here gets a paragraph.
 
-| Beat | Say roughly this |
-|---|---|
-| **0:00 open** | "A user management module: .NET 10, Angular 21, SQL Server, Clean Architecture. Three roles, JWT with rotating refresh tokens, soft delete, auditing at the persistence layer, English and Arabic, and optimistic concurrency." Then stop talking and start clicking. |
-| **Sign in** | "Passwords are hashed and salted. The access token is held in memory rather than local storage; the refresh token is a separate httpOnly cookie that rotates on every use." Show the refused sign-in: "an unknown username, a wrong password and a deleted account all get the same answer, so this cannot be used to discover whether an account exists." |
-| **Create user** | "Username and email uniqueness is enforced in the database, for active users only. The form checks availability on blur as a courtesy - the database is still the authority when it is submitted." |
-| **Search, sort, paging** | "List state lives in the URL, so a filtered view is shareable and the back button behaves." One sentence; move on. |
-| **Soft delete** | "Delete is a soft delete. The normal query path excludes deleted users automatically, and restoring one is a separately authorized operation." On the second delete: "that is a structured 409 conflict rather than letting the state go inconsistent." |
-| **Audit trail** | "Auditing runs in an EF Core interceptor at the persistence layer, so it cannot be forgotten by a caller." Then the line worth saying slowly: "audit identity is the immutable user id, not the username - usernames are released when a user is soft-deleted and can be reused by someone else." |
-| **Read-only role** | "The interface hides what this role cannot do, but authorization is enforced on the API. Here is the same operation called directly - 403." That demonstration is the point; let it land. |
-| **Profile** | "A user can edit their own profile and cannot change their own role. The profile contract has no role field at all." |
-| **Arabic** | "English and Arabic, including right-to-left layout and localized validation and error messages." Switch, let it render, move on. |
-| **Close** | "425 automated tests: backend unit and integration against real SQL Server, Angular component tests, and a Playwright browser suite covering accessibility and responsive layout - plus 66 Postman assertions. Verified from a clean clone, and the whole stack runs on one Docker command." |
+| Timestamp | Beat | Say roughly this |
+|---|---|---|
+| **0:00** | Open and sign in | "A user management module: .NET 10, Angular 21, SQL Server, Clean Architecture. Three roles, JWT with rotating refresh tokens, soft delete, auditing at the persistence layer, English and Arabic, and optimistic concurrency." Then stop talking and start clicking. On the refused sign-in: "an unknown username, a wrong password and a deleted account all get the same answer, so this cannot be used to discover whether an account exists." |
+| **0:15** | The list, and the token | "Passwords are hashed and salted. The access token is held in memory rather than local storage - that is the one key you can see there, the language - and the refresh token is a separate httpOnly cookie that rotates on every use." |
+| **0:28** | Create a user | "Username and email uniqueness is enforced in the database, for active users only. The form checks availability on blur as a courtesy; the database is still the authority when it is submitted." |
+| **0:52** | Edit a user | "Opening an existing user loads it from the API." Then the point: "username is disabled, because it is immutable server-side - the form does not offer what the API would refuse. A password change is its own endpoint, callable only by the owner." As you change the name and role: "profile fields and the role are editable, and the role only on the admin route." |
+| **1:18** | Two administrators, one user | "Both of us have this user open, and the other administrator saves first." After the refusal: "409, resource modified. The row version this form loaded is no longer current, so my save cannot silently overwrite theirs. That is a lost update, and it would leave the audit trail describing both changes as deliberate." |
+| **1:43** | Search, sort, empty state | "List state lives in the URL, so a filtered view is shareable and the back button behaves." One sentence; move on. |
+| **2:09** | Soft delete and restore | "Delete is a soft delete. The normal query path excludes deleted users automatically, and restoring one is a separately authorized operation." |
+| **2:42** | Audit trail | "Auditing runs in an EF Core interceptor at the persistence layer, so a caller cannot forget it." Then, slowly: "audit identity is the immutable user id, not the username - usernames are released when a user is soft-deleted and can be reused by someone else." |
+| **2:57** | Read-only role, and a direct 403 | "The interface hides what this role cannot do, but authorization is enforced on the API. Here is the same operation called directly - 403." Let it land. |
+| **3:16** | Profile | "A user edits their own profile and cannot change their own role. The profile contract has no role field at all." |
+| **3:27** | Arabic and RTL | "English and Arabic, including right-to-left layout and localized validation and error messages." Switch, let it render, move on. |
+| **3:44** | Structured error, and Swagger | "A stable error code the SPA and the tests branch on, a localized message, and a trace id that also appears in the logs. Sorting is a whitelist, so a client column name never reaches SQL." Then: "and the API stands on its own." |
+| **4:04** | Close | "425 automated tests: backend unit and integration against real SQL Server, Angular component tests, and a Playwright browser suite covering accessibility and responsive layout - plus 66 Postman assertions. Verified from a clean clone, and the whole stack runs on one Docker command." |
+
+Timestamps are measured from the narration-pace recording (`DEMO_PACE=1.7`), which runs **4:04**. The default
+pace runs 2:40 and is the better rehearsal reference. Both are regenerated by `npm run demo:record`.
 
 **The closing number was 412 earlier in the project and is now 425** - 114 unit, 153 integration, 75 Angular,
 83 browser. Say the current figure or say "over four hundred"; a number an assessor can check and find wrong is
