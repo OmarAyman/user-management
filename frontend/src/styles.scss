@@ -64,3 +64,30 @@ a:focus-visible,
   outline: 2px solid var(--mat-sys-primary);
   outline-offset: 2px;
 }
+
+/*
+  The Material icon font, applied by hand.
+
+  Google's hosted stylesheet used to do two things: declare the @font-face and define the `.material-icons`
+  class that points `mat-icon` at it. Bundling the font through @fontsource brings the first and not the
+  second - so without this block every icon renders as its own ligature text, and the interface reads
+  "visibility", "delete", "edit" instead of showing icons. That is what it looked like on the first
+  containerised run, and what it would look like on any network that cannot reach fonts.gstatic.com.
+
+  `direction: ltr` is required rather than stylistic: the glyph is selected by a ligature over the element's
+  text, and in an Arabic layout an inherited rtl direction stops that ligature resolving.
+*/
+.mat-icon,
+.material-icons {
+  font-family: 'Material Icons', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}

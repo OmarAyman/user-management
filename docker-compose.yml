@@ -153,6 +153,10 @@ services:
       # origin the browser sees at http://localhost:4200.
       E2E_BASE_URL: "http://web"
 
+      # nginx is only in front of the containerised stack, so the security-header assertions run here and are
+      # skipped against the dev server rather than weakened to pass in both.
+      E2E_EXPECT_PROD_HEADERS: "1"
+
 volumes:
   mssql-data:
   mssql-test-data:

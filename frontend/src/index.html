@@ -11,10 +11,13 @@
       lang and dir start as en/ltr and are replaced by LocaleService before the first paint, so an Arabic user
       does not see a left-to-right flash.
     -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <!--
+      Roboto and the Material icon font are bundled, not fetched from Google. Three reasons, in order of
+      weight: on a network that cannot reach fonts.gstatic.com every icon renders as its own ligature text -
+      "visibility", "delete", "edit" - which is a broken interface, not a degraded one; a strict
+      Content-Security-Policy on the page needs no third-party exemption; and nothing about the interface
+      changes if a CDN is slow or gone.
+    -->
   </head>
   <body>
     <app-root></app-root>

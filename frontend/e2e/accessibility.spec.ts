@@ -198,6 +198,12 @@ test.describe('accessibility - behaviours axe cannot check', () => {
   test('the whole sign-in form is reachable and submittable by keyboard alone', async ({ page }) => {
     await page.goto('/login');
 
+    // Wait for the form before tabbing. `goto` resolves on load, which is not the same as the application
+    // having bootstrapped - tabbing into a page that has not rendered its form sends every keystroke nowhere,
+    // and the failure then looks like a broken sign-in rather than a test racing the app. It became visible
+    // when the stylesheet grew and first paint moved later.
+    await expect(page.getByLabel('Username')).toBeVisible();
+
     await page.keyboard.press('Tab');
     await page.keyboard.type('admin');
     await page.keyboard.press('Tab');
